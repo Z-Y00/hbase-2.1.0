@@ -7,7 +7,9 @@ import java.nio.ByteBuffer;
 public class RdmaNative {
     static {
         System.loadLibrary("RdmaNative");
-      }
+        RdmaNative.rdmaInitGlobal();
+        // The kernel will cleanup all resources on exit. Use finalize() for another class in the future.
+    }
         // This function must be called exactly once to construct necessary structs.
         // It will construct rdmaContext and other global var.
     public native boolean rdmaInitGlobal();

@@ -85,7 +85,6 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class SimpleRpcServer extends RpcServer {
   private static RdmaNative rdma = new RdmaNative();
   static {
-    rdma.rdmaInitGlobal();
     rdma.rdmaBind(2333);
   }
       //TODO isRdma get from conf
@@ -385,15 +384,11 @@ public class SimpleRpcServer extends RpcServer {
 
     public RdmaListener(final String name) throws IOException {
       super(name);
-      SimpleRpcServer.LOG.warn("RDMA listener init");
       // The backlog of requests that we will have the serversocket carry.
       int backlogLength = conf.getInt("hbase.ipc.server.listen.queue.size", 128);
       readerPendingConnectionQueueLength =
           conf.getInt("hbase.ipc.server.read.connection-queue.size", 100);
       // Create a new server socket and set to non blocking mode
-
-      // Bind the server socket to the binding addrees (can be different from the default interface)
-     
 
       readers = new Reader[readThreads];
       // Why this executor thing? Why not like hadoop just start up all the threads? I suppose it
