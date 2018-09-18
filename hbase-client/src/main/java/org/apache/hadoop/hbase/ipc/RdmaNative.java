@@ -1,5 +1,5 @@
-
 package org.apache.hadoop.hbase.ipc;
+
 import org.apache.yetus.audience.InterfaceAudience;
 import java.nio.ByteBuffer;
 @InterfaceAudience.Public
@@ -10,16 +10,16 @@ public class RdmaNative {
         RdmaNative.rdmaInitGlobal();
         // The kernel will cleanup all resources on exit. Use finalize() for another class in the future.
     }
-        // This function must be called exactly once to construct necessary structs.
-        // It will construct rdmaContext and other global var.
-    public native boolean rdmaInitGlobal();
-        // This function must be called exactly once to destruct global structs.
-    public native void rdmaDestroyGlobal();
+    // This function must be called exactly once to construct necessary structs.
+    // It will construct rdmaContext and other global var.
+    public static native boolean rdmaInitGlobal();
+    // This function must be called exactly once to destruct global structs.
+    public static native void rdmaDestroyGlobal();
     
     // Connect to remote host. Blocked operation. If failed, return null.
     public native RdmaClientConnection rdmaConnect(String addr, int port);
-        // This function must be called once by server, to bind a port.
-    public native boolean rdmaBind(int port);
+    // This function must be called once by server, to bind a port.
+    public static native boolean rdmaBind(int port);
     // Wait and accept a connection. Blocked operation. If failed, return null.
     public native RdmaServerConnection rdmaBlockedAccept();
     
