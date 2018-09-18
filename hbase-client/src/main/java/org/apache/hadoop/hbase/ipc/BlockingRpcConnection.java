@@ -105,6 +105,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private DataOutputStream rdma_out;//TODO rgy init
   private ByteArrayOutputStream rdma_out_stream;
   private static RdmaNative rdma = new RdmaNative();
+  static {
+    rdma.rdmaInitGlobal();
+  }
   private RdmaNative.RdmaClientConnection rdmaconn;//init this at L723 
 
   public int rdmaPort=2333;
@@ -716,7 +719,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
     RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
     //this.qp=rdmaConnect("11.11.0.111",rdmaPort); //TODO temp fix
-    rdma.rdmaInitGlobal();
     LOG.warn("RDMA init done L726");
     LOG.warn("RDMA rdmaConnect L727 with addr and port "+rdmaPort);
     

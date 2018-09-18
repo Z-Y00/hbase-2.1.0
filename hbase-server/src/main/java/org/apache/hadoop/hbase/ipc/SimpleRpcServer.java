@@ -85,6 +85,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class SimpleRpcServer extends RpcServer {
   private static RdmaNative rdma = new RdmaNative();
   static {
+    rdma.rdmaInitGlobal();
     rdma.rdmaBind(2333);
   }
       //TODO isRdma get from conf
@@ -495,8 +496,6 @@ public class SimpleRpcServer extends RpcServer {
     public void run() {
       SimpleRpcServer.LOG.warn("RDMA listener start and bind at port "+ rdmaPort);
       LOG.info(getName() + ": starting");
-      rdma.rdmaInitGlobal();
-      rdma.rdmaBind(rdmaPort);
       int i=1;
       while (running) {
         SimpleServerRdmaRpcConnection rdma_conn=getRdmaConnection(rdmaPort,System.currentTimeMillis());
@@ -516,7 +515,6 @@ public class SimpleRpcServer extends RpcServer {
 
     synchronized void doStop() {
       SimpleRpcServer.LOG.warn("RDMA listener doStop");
-      rdma.rdmaDestroyGlobal();//listener only need to call rdmaDestroyGlobal??
       readPool.shutdownNow();
     }
 
@@ -578,7 +576,6 @@ public class SimpleRpcServer extends RpcServer {
     {
       LOG.warn("RDMA close failed L583");
     }
-    rdma.rdmaDestroyGlobal();//TODO drop rdmaconn from the manager
   }
 
   /** Sets the socket buffer size used for responding to RPCs.
