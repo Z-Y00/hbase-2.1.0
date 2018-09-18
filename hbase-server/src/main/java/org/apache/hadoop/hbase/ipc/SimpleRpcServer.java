@@ -85,7 +85,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 public class SimpleRpcServer extends RpcServer {
   private static RdmaNative rdma = new RdmaNative();
   static {
-    rdma.bind(2333);
+    rdma.rdmaBind(2333);
   }
       //TODO isRdma get from conf
       
