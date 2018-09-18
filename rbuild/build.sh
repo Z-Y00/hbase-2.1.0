@@ -12,8 +12,6 @@ cp ./target/hbase-client-2.1.0.jar ../rbuild/bin/lib
 cd ../rbuild/bin/lib
 echo "
 cd ./hbase-2.1.0/lib/
-ls
-lls
 put ./*.jar
 "|sftp $ID
 echo done.
