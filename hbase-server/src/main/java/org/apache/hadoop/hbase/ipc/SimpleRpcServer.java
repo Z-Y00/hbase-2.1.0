@@ -83,7 +83,10 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
 public class SimpleRpcServer extends RpcServer {
-  private RdmaNative rdma= new  RdmaNative();
+  private static RdmaNative rdma = new RdmaNative();
+  static {
+    rdma.bind(2333);
+  }
       //TODO isRdma get from conf
       
 
