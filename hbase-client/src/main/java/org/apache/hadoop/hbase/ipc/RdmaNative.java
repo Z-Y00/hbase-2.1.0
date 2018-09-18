@@ -19,7 +19,7 @@ public class RdmaNative {
     // Connect to remote host. Blocked operation. If failed, return null.
     public native RdmaClientConnection rdmaConnect(String addr, int port);
     // This function must be called once by server, to bind a port.
-    public static native boolean rdmaBind(int port);
+    public native boolean rdmaBind(int port);
     // Wait and accept a connection. Blocked operation. If failed, return null.
     public native RdmaServerConnection rdmaBlockedAccept();
     
