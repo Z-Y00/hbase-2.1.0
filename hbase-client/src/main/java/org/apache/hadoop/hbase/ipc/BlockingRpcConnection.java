@@ -741,8 +741,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       LOG.warn("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+"  "+ sbuf.length + "  "+ sbuf); 
       
       ByteBuffer tmp = ByteBuffer.wrap(sbuf);
-      if(tmp == null) {
-        LOG.warn("FFFFFFFFFuck! ByteBuffer.wrap(sbuf) is null.");
+      if(!tmp.isDirect()) {
+        LOG.warn("FFFFFFFFFuck! ByteBuffer.wrap(sbuf) is not direct.");
       }
       if(!rdmaconn.writeQuery(tmp))
       {
