@@ -559,7 +559,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // Write out the preamble -- MAGIC, version, and auth to use.
         rdma_out.write(connectionHeaderPreamble);
         // Now write out the connection header
-        this.rdma_out.write(connectionHeaderWithLength); 
+        rdma_out.write(connectionHeaderWithLength); 
         //processResponseForConnectionHeader(); no support for encryption RGY
  
     } catch (Throwable t) {
@@ -850,7 +850,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     boolean expectedCall = false;
     try {
       ByteBuffer rbuf=this.rdmaconn.readResponse();
-      rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf.array(),rbuf.arrayOffset(),rbuf.limit()));
+      rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf.array(),rbuf.arrayOffset(),rbuf.limit()));//TODO check if this is right
       // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
       int totalSize = rdma_in.readInt();
