@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.ipc.IPCUtil.isFatalConnectionException;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
 import static org.apache.hadoop.hbase.ipc.IPCUtil.write;
 
+import java.nio.charset.StandardCharsets;
 import java.io.ByteArrayInputStream; 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
@@ -742,12 +743,12 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
       ByteBuffer tmp = ByteBuffer.wrap(sbuf);
       directbuf.put(tmp);
-      if(!tmp.isDirect()) {
-        LOG.warn("FFFFFFFFFuck! ByteBuffer.wrap(sbuf) is not direct.");
-      }
+      // if(!tmp.isDirect()) {
+      //   LOG.warn("FFFFFFFFFuck! ByteBuffer.wrap(sbuf) is not direct.");
+      // }
       if(!rdmaconn.writeQuery(directbuf))
       {
-        LOG.warn("RDMA writeQuery Failed");
+        LOG.warn("RDMA writeQuery Failed with the buf "+StandardCharsets.UTF_8.decode(directbuf).toString());
       }
     } catch (Throwable t) {
       if(LOG.isTraceEnabled()) {
