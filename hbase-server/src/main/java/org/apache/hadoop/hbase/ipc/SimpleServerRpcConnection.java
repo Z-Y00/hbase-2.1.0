@@ -28,7 +28,7 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
-
+import java.nio.charset.StandardCharsets;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -290,6 +290,10 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
    */
   private void process() throws IOException, InterruptedException {
     data.rewind();
+    byte[] arr = new byte[data.remaining()];
+    data.get(arr);
+    SimpleRpcServer.LOG.warn("RDMA normal data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+
     try {
       if (skipInitialSaslHandshake) {
         skipInitialSaslHandshake = false;

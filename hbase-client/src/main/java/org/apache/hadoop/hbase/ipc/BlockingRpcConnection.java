@@ -533,14 +533,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
   private void setupRdmaIOstreams() throws IOException {
     LOG.warn("RDMA setupRdmaIOstreams");
-    //if (socket != null) {
-      // The connection is already available. Perfect.
-    //  return;
-    //}
-    this.rdma_out_stream = new ByteArrayOutputStream();
-    this.rdma_out = new DataOutputStream(this.rdma_out_stream);
 
-    //TODO init rdma conn here
+
 
     if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
       if (LOG.isDebugEnabled()) {
@@ -555,8 +549,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Connecting to " + remoteId.address);
       }
-
-
         // Write out the preamble -- MAGIC, version, and auth to use.
         rdma_out.write(connectionHeaderPreamble);
         // Now write out the connection header
@@ -564,7 +556,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         //processResponseForConnectionHeader(); no support for encryption RGY
  
     } catch (Throwable t) {
-      closeSocket();
       IOException e = ExceptionUtil.asInterrupt(t);
       if (e == null) {
         this.rpcClient.failedServers.addToFailedServers(remoteId.address, t);
@@ -659,7 +650,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
        String callMd = call.md.getName();
       if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get")) || (callMd.equals("Multi")) || (callMd.equals("Scan"))))
         {LOG.warn("RDMA get a call with callMd "+ callMd);
-        writeRdmaRequest(call);}
+        //writeRdmaRequest(call);}
+        writeRequest(call);}//debugging
       else
         writeRequest(call);
     }
@@ -722,6 +714,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     do this.rdmaconn=rdma.rdmaConnect("11.11.0.111",rdmaPort);
     while (this.rdmaconn==null);  
     LOG.warn("RDMA rdmaConnect done "+this.rdmaconn);
+    this.rdma_out_stream = new ByteArrayOutputStream();
+    this.rdma_out = new DataOutputStream(this.rdma_out_stream);
+
     setupRdmaIOstreams();
 
     // Now we're going to write the call. We take the lock, then check that the connection
@@ -738,18 +733,17 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       call.callStats.setRequestSizeBytes(write(this.rdma_out, requestHeader, call.param, cellBlock));
       
       byte[] sbuf=this.rdma_out_stream.toByteArray();
-      LOG.warn("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+"  "+ sbuf.length + "  "+ sbuf); 
+      LOG.warn("RDMA rdmaWrite with length "+rdma_out_stream.size()); 
       //allocate direct buf
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
       ByteBuffer tmp = ByteBuffer.wrap(sbuf);
       directbuf.put(tmp);
-      // if(!tmp.isDirect()) {
-      //   LOG.warn("FFFFFFFFFuck! ByteBuffer.wrap(sbuf) is not direct.");
-      // }
+
+      LOG.warn("RDMA writeQuery with the buf "+StandardCharsets.UTF_8.decode(directbuf).toString());
+      LOG.warn("RDMA writeQuery with the tmp buf "+StandardCharsets.UTF_8.decode(tmp).toString());
       if(!rdmaconn.writeQuery(directbuf))
-      {
-        LOG.warn("RDMA writeQuery Failed with the buf "+StandardCharsets.UTF_8.decode(directbuf).toString());
-      }
+      LOG.warn("RDMA writeQuery failed");
+
     } catch (Throwable t) {
       if(LOG.isTraceEnabled()) {
         LOG.trace("Error while writing call, call_id:" + call.id, t);

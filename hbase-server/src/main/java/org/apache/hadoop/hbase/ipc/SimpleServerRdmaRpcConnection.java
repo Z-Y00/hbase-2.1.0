@@ -109,8 +109,9 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   boolean isReadable(){
     if (rdmaconn.isQueryReadable()) {
       this.rbuf=rdmaconn.readQuery();
+      this.rbuf.rewind();
       //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
-      SimpleRpcServer.LOG.warn("RDMA isReadable get rbuf with content "+ StandardCharsets.UTF_8.decode(rbuf).toString());
+      SimpleRpcServer.LOG.warn("RDMA isReadable get rbuf with length and content "+rbuf.remaining() +" "+ StandardCharsets.UTF_8.decode(rbuf).toString());
       return true;
     } else {
       return false;
@@ -135,7 +136,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   //   }
   //   return nTransfer;
   // }
-  public static int bufcopy(ByteBuffer dst, ByteBuffer src){
+  public static int bufcopy(ByteBuffer src, ByteBuffer dst){
     int i=0;
     while (src.hasRemaining()&&dst.hasRemaining())
     {dst.put(src.get()); 
@@ -147,13 +148,17 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     if (preambleBuffer == null) {
       preambleBuffer = ByteBuffer.allocate(6);
     }
-    int count = bufcopy(rbuf, preambleBuffer);//TODO change to rdma
-    SimpleRpcServer.LOG.warn("RDMA readAndProcess with count "+ count);
+    preambleBuffer.rewind(); 
+    rbuf.rewind();
+    int count = bufcopy(rbuf, preambleBuffer);
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess with count "+ count+" preambleBuffer "+preambleBuffer);
     if (count < 0 || preambleBuffer.remaining() > 0) {
+      SimpleRpcServer.LOG.warn("RDMA readPreamble return with 1 ERR");
       return count;
     }
     preambleBuffer.flip();
     if (!processPreamble(preambleBuffer)) {
+      SimpleRpcServer.LOG.warn("RDMA readPreamble return with -1 ERR");
       return -1;
     }
     preambleBuffer = null; // do not need it anymore
@@ -163,7 +168,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
   private int read4Bytes() throws IOException {
     if (this.dataLengthBuffer.remaining() > 0) {
-      return bufcopy(rbuf, this.dataLengthBuffer);//TODO change to rdma
+      return bufcopy(rbuf, this.dataLengthBuffer);
     } else {
       return 0;
     }
@@ -177,12 +182,11 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
    * @throws InterruptedException
    */
   public int readAndProcess() throws IOException, InterruptedException {//TODO RGY change to better responder
-    SimpleRpcServer.LOG.warn("RDMA readAndProcess  178");
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess  180");
     // If we have not read the connection setup preamble, look to see if that is on the wire.
     //rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf.array(),rbuf.arrayOffset(),rbuf.limit()));
     if (!connectionPreambleRead) {
       int count = readPreamble();
-      SimpleRpcServer.LOG.warn("RDMA readAndProcess with count1 "+ count);
       if (!connectionPreambleRead) {
         return count;
       }
@@ -191,14 +195,14 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     // Try and read in an int. it will be length of the data to read (or -1 if a ping). We catch the
     // integer length into the 4-byte this.dataLengthBuffer.
     int count = read4Bytes();
-    SimpleRpcServer.LOG.warn("RDMA readAndProcess with count2 "+ count);
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess read4Bytes with count2 "+ count);
     if (count < 0 || dataLengthBuffer.remaining() > 0) {
       return count;
     }
 
     // We have read a length and we have read the preamble. It is either the connection header
     // or it is a request.
-    if (data == null) {
+    //if (data == null) { TODO RGY debugging always init the data buffer
       dataLengthBuffer.flip();
       int dataLength = dataLengthBuffer.getInt();
       SimpleRpcServer.LOG.warn("RDMA readAndProcess with dataLength "+ dataLength);
@@ -222,21 +226,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
         if (connectionHeaderRead && connectionPreambleRead) {
           incRpcCount();
-          // Construct InputStream for the non-blocking SocketChannel
-          // We need the InputStream because we want to read only the request header
-          // instead of the whole rpc.
-          //ByteBuffer buf = ByteBuffer.allocate(1);
-          // InputStream is = new InputStream() {
-          //   @Override
-          //   public int read() throws IOException {
-          //     //transferAsMuchAsPossible(rbuf, buf);
-          //     buf.flip();
-          //     int x = buf.get();
-          //     buf.flip();
-          //     return x;
-          //   }
-          // };
-          CodedInputStream cis = CodedInputStream.newInstance(rbuf);//TODO check if correct
+          CodedInputStream cis = CodedInputStream.newInstance(rbuf);//TODO drop the first a few byte
           int headerSize = cis.readRawVarint32();
           SimpleRpcServer.LOG.warn("RDMA readAndProcess with headerSize"+ headerSize);
           Message.Builder builder = RequestHeader.newBuilder();
@@ -276,11 +266,15 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       // the response. If we want the connection to be detected as idle properly, we
       // need to keep the inc / dec correct.
       incRpcCount();
-    }
+    //}
 
     //count = channelDataRead(rbuf, data);//TODO dropped count
-      data.put(rbuf.array(),0,rbuf.remaining());//??? RGY
-   
+     SimpleRpcServer.LOG.warn("RDMA rbuf with length "+ rbuf.remaining());
+      //data.put(rbuf.array(),0,rbuf.remaining());//TODO  RGY faster copy
+      byte[] arr = new byte[rbuf.remaining()];
+      rbuf.get(arr);
+      data.put(arr,0,dataLength);
+      SimpleRpcServer.LOG.warn("RDMA data" +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
       process();
 
     return count;
@@ -316,6 +310,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   private void process() throws IOException, InterruptedException {
     data.rewind();
     try {
+      SimpleRpcServer.LOG.warn("RDMA processOneRpc");
         processOneRpc(data);
     } finally {
       dataLengthBuffer.clear(); // Clean for the next call
