@@ -60,7 +60,6 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
   private long lastContact;
   private final Socket socket;
   final SimpleRpcServerResponder responder;
-  //final RdmaHandler rdmahandler;
 
   // If initial preamble with version and magic has been read or not.
   private boolean connectionPreambleRead = false;

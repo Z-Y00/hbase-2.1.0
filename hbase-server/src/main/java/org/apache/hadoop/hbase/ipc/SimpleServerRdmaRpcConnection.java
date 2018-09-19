@@ -34,6 +34,15 @@ import org.apache.hadoop.hbase.client.VersionInfoUtil;
 import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
 import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
+//import org.apache.hadoop.hbase.io.ByteArrayInputStream;
+import java.io.ByteArrayInputStream; 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.OutputStream;
+import java.io.InputStream;
+import java.io.DataOutputStream;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
 import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
@@ -100,6 +109,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   boolean isReadable(){
     if (rdmaconn.isQueryReadable()) {
       this.rbuf=rdmaconn.readQuery();
+      //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
       SimpleRpcServer.LOG.warn("RDMA isReadable get rbuf with content "+ StandardCharsets.UTF_8.decode(rbuf).toString());
       return true;
     } else {
@@ -116,22 +126,28 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     rpcCount.increment();
   }
 
-  //taken from stack overflow
-  public static int transferAsMuchAsPossible(ByteBuffer bbuf_dest, ByteBuffer bbuf_src) {
-    int nTransfer = Math.min(bbuf_dest.remaining(), bbuf_src.remaining());
-    if (nTransfer > 0) {
-      bbuf_dest.put(bbuf_src.array(), bbuf_src.arrayOffset() + bbuf_src.position(), nTransfer);
-      bbuf_src.position(bbuf_src.position() + nTransfer);
-    }
-    return nTransfer;
+  // //taken from stack overflow
+  // public static int transferAsMuchAsPossible(ByteBuffer bbuf_dest, ByteBuffer bbuf_src) {
+  //   int nTransfer = Math.min(bbuf_dest.remaining(), bbuf_src.remaining());
+  //   if (nTransfer > 0) {
+  //     bbuf_dest.put(bbuf_src.array(), bbuf_src.arrayOffset() + bbuf_src.position(), nTransfer);
+  //     bbuf_src.position(bbuf_src.position() + nTransfer);
+  //   }
+  //   return nTransfer;
+  // }
+  public static int bufcopy(ByteBuffer dst, ByteBuffer src){
+    int i=0;
+    while (src.hasRemaining()&&dst.hasRemaining())
+    {dst.put(src.get()); 
+    i++;}
+    return i;
   }
-
 
   private int readPreamble() throws IOException {
     if (preambleBuffer == null) {
       preambleBuffer = ByteBuffer.allocate(6);
     }
-    int count = transferAsMuchAsPossible(rbuf, preambleBuffer);//TODO change to rdma
+    int count = bufcopy(rbuf, preambleBuffer);//TODO change to rdma
     SimpleRpcServer.LOG.warn("RDMA readAndProcess with count "+ count);
     if (count < 0 || preambleBuffer.remaining() > 0) {
       return count;
@@ -147,7 +163,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
   private int read4Bytes() throws IOException {
     if (this.dataLengthBuffer.remaining() > 0) {
-      return transferAsMuchAsPossible(rbuf, this.dataLengthBuffer);//TODO change to rdma
+      return bufcopy(rbuf, this.dataLengthBuffer);//TODO change to rdma
     } else {
       return 0;
     }
@@ -209,18 +225,18 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
           // Construct InputStream for the non-blocking SocketChannel
           // We need the InputStream because we want to read only the request header
           // instead of the whole rpc.
-          ByteBuffer buf = ByteBuffer.allocate(1);
-          InputStream is = new InputStream() {
-            @Override
-            public int read() throws IOException {
-              //transferAsMuchAsPossible(rbuf, buf);
-              buf.flip();
-              int x = buf.get();
-              buf.flip();
-              return x;
-            }
-          };
-          CodedInputStream cis = CodedInputStream.newInstance(is);
+          //ByteBuffer buf = ByteBuffer.allocate(1);
+          // InputStream is = new InputStream() {
+          //   @Override
+          //   public int read() throws IOException {
+          //     //transferAsMuchAsPossible(rbuf, buf);
+          //     buf.flip();
+          //     int x = buf.get();
+          //     buf.flip();
+          //     return x;
+          //   }
+          // };
+          CodedInputStream cis = CodedInputStream.newInstance(rbuf);//TODO check if correct
           int headerSize = cis.readRawVarint32();
           SimpleRpcServer.LOG.warn("RDMA readAndProcess with headerSize"+ headerSize);
           Message.Builder builder = RequestHeader.newBuilder();
