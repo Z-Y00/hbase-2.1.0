@@ -164,6 +164,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     //rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf.array(),rbuf.arrayOffset(),rbuf.limit()));
     if (!connectionPreambleRead) {
       int count = readPreamble();
+      SimpleRpcServer.LOG.warn("RDMA readAndProcess with count1"+ count);
       if (!connectionPreambleRead) {
         return count;
       }
@@ -172,6 +173,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     // Try and read in an int. it will be length of the data to read (or -1 if a ping). We catch the
     // integer length into the 4-byte this.dataLengthBuffer.
     int count = read4Bytes();
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess with count2"+ count);
     if (count < 0 || dataLengthBuffer.remaining() > 0) {
       return count;
     }
@@ -181,6 +183,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     if (data == null) {
       dataLengthBuffer.flip();
       int dataLength = dataLengthBuffer.getInt();
+      SimpleRpcServer.LOG.warn("RDMA readAndProcess with dataLength"+ dataLength);
       if (dataLength == RpcClient.PING_CALL_ID) {
         if (!useWrap) { // covers the !useSasl too
           dataLengthBuffer.clear();
@@ -217,6 +220,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
           };
           CodedInputStream cis = CodedInputStream.newInstance(is);
           int headerSize = cis.readRawVarint32();
+          SimpleRpcServer.LOG.warn("RDMA readAndProcess with headerSize"+ headerSize);
           Message.Builder builder = RequestHeader.newBuilder();
           ProtobufUtil.mergeFrom(builder, cis, headerSize);
           RequestHeader header = (RequestHeader) builder.build();

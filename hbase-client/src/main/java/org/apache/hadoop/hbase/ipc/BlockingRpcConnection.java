@@ -555,14 +555,13 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         LOG.debug("Connecting to " + remoteId.address);
       }
 
-      while (true) {
+
         // Write out the preamble -- MAGIC, version, and auth to use.
         rdma_out.write(connectionHeaderPreamble);
         // Now write out the connection header
         this.rdma_out.write(connectionHeaderWithLength); 
         //processResponseForConnectionHeader(); no support for encryption RGY
-        break;
-      }
+ 
     } catch (Throwable t) {
       closeSocket();
       IOException e = ExceptionUtil.asInterrupt(t);
