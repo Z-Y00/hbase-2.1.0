@@ -103,7 +103,7 @@ public class SimpleRpcServer extends RpcServer {
   private Listener listener = null;
   private RdmaListener rdmalistener = null;
   protected SimpleRpcServerResponder responder = null;
-  protected SimpleRpcServerRdmaResponder rdmaresponder = null;
+  protected SimpleRpcServerRdmaResponder rdmaresponder = null;//TODO RGY
 
   /** Listens on the socket. Creates jobs for the handler threads*/
   private class Listener extends Thread {

@@ -41,7 +41,6 @@ import org.apache.hadoop.util.StringUtils;
  */
 @InterfaceAudience.Private
 class SimpleRpcServerRdmaResponder extends Thread {
-  //public native boolean rdmaDoRespond(Object qp, ByteBuffer sbuf);
 
   private final SimpleRpcServer simpleRpcServer;
   private   ConcurrentLinkedDeque<SimpleServerRdmaRpcConnection> connsQueue;
@@ -153,6 +152,7 @@ class SimpleRpcServerRdmaResponder extends Thread {
   // Enqueue a response from the application.
   //
   void doRespond(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
+    SimpleRpcServer.LOG.info("recolic: rdma responder::doRespond");
     boolean added = false;
     this.connsQueue.add(conn);//?? TODO
     // If there is already a write in progress, we don't wait. This allows to free the handlers

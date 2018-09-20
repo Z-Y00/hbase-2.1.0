@@ -38,6 +38,7 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
 
   final SimpleRpcServerResponder responder;
   final SimpleRpcServerRdmaResponder rdmaresponder;
+  final boolean isRdma;
   //final RdmaHandler rdmahandler;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
@@ -52,6 +53,7 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
         receiveTime, timeout, reservoir, cellBlockBuilder, reqCleanup);
     this.responder = responder;
     this.rdmaresponder = null;
+    this.isRdma = false;
   }
 
   SimpleServerCall(int id, final BlockingService service, final MethodDescriptor md, 
@@ -63,6 +65,7 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
         reservoir, cellBlockBuilder, reqCleanup);
     this.rdmaresponder = rdmaresponder;
     this.responder = null;
+    this.isRdma = true;
   }
 
   /**
@@ -76,11 +79,17 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
     this.getConnection().decRpcCount(); // Say that we're done with this call.
   }
 
-  @Override
+  @Override///TODO rgy add rdma supplicant of this fun
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
+    SimpleRpcServer.LOG.warn("RDMA ？ sendResponseIfReady");
     this.param = null;
-    this.responder.doRespond(getConnection(), this);
+    if(this.isRdma){
+      SimpleRpcServer.LOG.warn("RDMA: processResponse");
+      SimpleServerRdmaRpcConnection.processResponse(this.rdmaconn,this);//TODO change to rdmahandler
+    }else{
+      this.responder.doRespond(getConnection(), this);
+    }
   }
 
   SimpleServerRpcConnection getConnection() {

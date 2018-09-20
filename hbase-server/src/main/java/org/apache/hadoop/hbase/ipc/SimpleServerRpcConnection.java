@@ -357,6 +357,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   @Override
   protected void doRespond(RpcResponse resp) throws IOException {
+    SimpleRpcServer.LOG.info("normal doRespond");
     responder.doRespond(this, resp);
   }
 }

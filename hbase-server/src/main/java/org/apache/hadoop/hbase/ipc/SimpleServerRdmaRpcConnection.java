@@ -68,7 +68,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   private DataInputStream rdma_in;
   private final LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
   private long lastContact;
-  final SimpleRpcServerRdmaResponder responder;
+  final SimpleRpcServerRdmaResponder rdmaresponder;
   //final RdmaHandler rdmahandler;
 
   // If initial preamble with version and magic has been read or not.
@@ -86,7 +86,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.dataLengthBuffer = ByteBuffer.allocate(4);
     this.hostAddress = null;
     this.remotePort = port;
-    this.responder = rpcServer.rdmaresponder;
+    this.rdmaresponder = rpcServer.rdmaresponder;
     SimpleRpcServer.LOG.warn("RDMA init rdmaconn L98 simpleserverRdmaconn.java");
     do this.rdmaconn = rdma.rdmaBlockedAccept();
          while (this.rdmaconn==null);  
@@ -149,7 +149,6 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       preambleBuffer = ByteBuffer.allocate(6);
     }
     preambleBuffer.rewind(); 
-    rbuf.rewind();
     int count = bufcopy(rbuf, preambleBuffer);
     SimpleRpcServer.LOG.warn("RDMA readAndProcess with count "+ count+" preambleBuffer "+preambleBuffer);
     if (count < 0 || preambleBuffer.remaining() > 0) {
@@ -182,16 +181,10 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
    * @throws InterruptedException
    */
   public int readAndProcess() throws IOException, InterruptedException {//TODO RGY change to better responder
-    SimpleRpcServer.LOG.warn("RDMA readAndProcess  180");
-    // If we have not read the connection setup preamble, look to see if that is on the wire.
-    //rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf.array(),rbuf.arrayOffset(),rbuf.limit()));
-    if (!connectionPreambleRead) {
-      int count = readPreamble();
-      if (!connectionPreambleRead) {
-        return count;
-      }
-    }
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess  L185");
 
+    rbuf.rewind();
+    dataLengthBuffer.rewind();
     // Try and read in an int. it will be length of the data to read (or -1 if a ping). We catch the
     // integer length into the 4-byte this.dataLengthBuffer.
     int count = read4Bytes();
@@ -205,56 +198,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     //if (data == null) { TODO RGY debugging always init the data buffer
       dataLengthBuffer.flip();
       int dataLength = dataLengthBuffer.getInt();
-      SimpleRpcServer.LOG.warn("RDMA readAndProcess with dataLength "+ dataLength);
-      if (dataLength == RpcClient.PING_CALL_ID) {
-        if (!useWrap) { // covers the !useSasl too
-          dataLengthBuffer.clear();
-          return 0; // ping message
-        }
-      }
-      if (dataLength < 0) { // A data length of zero is legal.
-        throw new DoNotRetryIOException(
-            "Unexpected data length " + dataLength + "!! from " + getHostAddress());
-      }
-
-      if (dataLength > this.rpcServer.maxRequestSize) {
-        String msg = "RPC data length of " + dataLength + " received from " + getHostAddress() +
-            " is greater than max allowed " + this.rpcServer.maxRequestSize + ". Set \"" +
-            SimpleRpcServer.MAX_REQUEST_SIZE +
-            "\" on server to override this limit (not recommended)";
-        SimpleRpcServer.LOG.warn(msg);
-
-        if (connectionHeaderRead && connectionPreambleRead) {
-          incRpcCount();
-          CodedInputStream cis = CodedInputStream.newInstance(rbuf);//TODO drop the first a few byte
-          int headerSize = cis.readRawVarint32();
-          SimpleRpcServer.LOG.warn("RDMA readAndProcess with headerSize"+ headerSize);
-          Message.Builder builder = RequestHeader.newBuilder();
-          ProtobufUtil.mergeFrom(builder, cis, headerSize);
-          RequestHeader header = (RequestHeader) builder.build();
-
-          // Notify the client about the offending request
-          SimpleServerCall reqTooBig = new SimpleServerCall(header.getCallId(), this.service, null,
-              null, null, null, this, 0, this.addr, System.currentTimeMillis(), 0,
-              this.rpcServer.reservoir, this.rpcServer.cellBlockBuilder, null, responder);
-          this.rpcServer.metrics.exception(SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION);
-          // Make sure the client recognizes the underlying exception
-          // Otherwise, throw a DoNotRetryIOException.
-          if (VersionInfoUtil.hasMinimumVersion(connectionHeader.getVersionInfo(),
-            RequestTooBigException.MAJOR_VERSION, RequestTooBigException.MINOR_VERSION)) {
-            reqTooBig.setResponse(null, null, SimpleRpcServer.REQUEST_TOO_BIG_EXCEPTION, msg);
-          } else {
-            reqTooBig.setResponse(null, null, new DoNotRetryIOException(), msg);
-          }
-          // In most cases we will write out the response directly. If not, it is still OK to just
-          // close the connection without writing out the reqTooBig response. Do not try to write
-          // out directly here, and it will cause deserialization error if the connection is slow
-          // and we have a half writing response in the queue.
-          reqTooBig.sendResponseIfReady();
-        }
-        // Close the connection
-        return -1;
-      }
+      SimpleRpcServer.LOG.warn("RDMA readAndProcess get int dataLength "+ dataLength);
 
       // Initialize this.data with a ByteBuff.
       // This call will allocate a ByteBuff to read request into and assign to this.data
@@ -268,13 +212,11 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       incRpcCount();
     //}
 
-    //count = channelDataRead(rbuf, data);//TODO dropped count
-     SimpleRpcServer.LOG.warn("RDMA rbuf with length "+ rbuf.remaining());
-      //data.put(rbuf.array(),0,rbuf.remaining());//TODO  RGY faster copy
+      SimpleRpcServer.LOG.warn("RDMA rbuf data section with length "+ rbuf.remaining());
       byte[] arr = new byte[rbuf.remaining()];
       rbuf.get(arr);
       data.put(arr,0,dataLength);
-      SimpleRpcServer.LOG.warn("RDMA data" +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+      SimpleRpcServer.LOG.warn("RDMA rbuf data section content" +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
       process();
 
     return count;
@@ -323,7 +265,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   public synchronized void close() {
     if(!rdmaconn.close())
     {
-      SimpleRpcServer.LOG.warn("RDMA close failed L583");
+      SimpleRpcServer.LOG.warn("RDMA close failed L275");
     }
     //rdma.rdmaDestroyGlobal();
     data = null;
@@ -340,23 +282,25 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   public SimpleServerCall createCall(int id, BlockingService service, MethodDescriptor md,
       RequestHeader header, Message param, CellScanner cellScanner, long size,
       InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
+        SimpleRpcServer.LOG.warn("RDMA createCall");
     return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
-        this.rpcServer.cellBlockBuilder, reqCleanup, this.responder);
+        this.rpcServer.cellBlockBuilder, reqCleanup, this.rdmaresponder);
   }
 
   @Override
   protected void doRespond(RpcResponse resp) throws IOException {
+    SimpleRpcServer.LOG.warn("RDMA doRespond");
     processResponse(this, resp);// this should be okey if we just respond it here,without a responder? TODO
   }
-
-  private boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
+//this shouldn't be public , this should only be done via the rdma responder or handler. TODO RGY
+  public static boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
     boolean error = true;
     BufferChain buf = resp.getResponse();
     try {
       // Send as much data as we can in the non-blocking fashion
 
-      SimpleRpcServer.LOG.info("recolic: rdmaHandler::doRespond");
+      
       ByteBuffer sbuf = buf.concat();
       //rdma.rdmaRespond(conn.qp, sbuf);
       if(conn.rdmaconn.writeResponse(sbuf)) 

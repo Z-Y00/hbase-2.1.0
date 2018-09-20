@@ -30,6 +30,7 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.security.GeneralSecurityException;
 import java.util.Properties;
+import java.nio.charset.StandardCharsets;
 
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.commons.crypto.random.CryptoRandom;
@@ -451,6 +452,10 @@ abstract class ServerRpcConnection implements Closeable {
 
   public void processOneRpc(ByteBuff buf) throws IOException,
       InterruptedException {
+        byte[] arr = new byte[buf.remaining()];
+        buf.get(arr);
+    SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+
     if (connectionHeaderRead) {
       processRequest(buf);
     } else {

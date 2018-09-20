@@ -100,10 +100,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
   // connected socket. protected for writing UT.
   protected Socket socket = null;
-  private DataInputStream in;//TODO rgy change to rdma
+  private DataInputStream in;
   private DataOutputStream out;
   private DataInputStream rdma_in;
-  private DataOutputStream rdma_out;//TODO rgy init
+  private DataOutputStream rdma_out;
   private ByteArrayOutputStream rdma_out_stream;
   private static RdmaNative rdma = new RdmaNative();
   private RdmaNative.RdmaClientConnection rdmaconn;//init this at L723 
@@ -533,9 +533,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
   private void setupRdmaIOstreams() throws IOException {
     LOG.warn("RDMA setupRdmaIOstreams");
-
-
-
     if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Not trying to connect to " + remoteId.address
@@ -553,7 +550,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         rdma_out.write(connectionHeaderPreamble);
         // Now write out the connection header
         rdma_out.write(connectionHeaderWithLength); 
-        //processResponseForConnectionHeader(); no support for encryption RGY
  
     } catch (Throwable t) {
       IOException e = ExceptionUtil.asInterrupt(t);
@@ -647,11 +643,16 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private void tracedWriteRequest(Call call) throws IOException {
     try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
           call.span)) {
+
+      LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
+      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
+      +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
+       LOG.warn("RDMA get a call with callMd "+ callMd);
       if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get")) || (callMd.equals("Multi")) || (callMd.equals("Scan"))))
-        {LOG.warn("RDMA get a call with callMd "+ callMd);
-        //writeRdmaRequest(call);}
-        writeRequest(call);}//debugging
+        {
+        writeRdmaRequest(call);}
+        //writeRequest(call);}//debugging
       else
         writeRequest(call);
     }
@@ -717,7 +718,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     this.rdma_out_stream = new ByteArrayOutputStream();
     this.rdma_out = new DataOutputStream(this.rdma_out_stream);
 
-    setupRdmaIOstreams();
+    //setupRdmaIOstreams();
 
     // Now we're going to write the call. We take the lock, then check that the connection
     // is still valid, and, if so we do the write to the socket. If the write fails, we don't
