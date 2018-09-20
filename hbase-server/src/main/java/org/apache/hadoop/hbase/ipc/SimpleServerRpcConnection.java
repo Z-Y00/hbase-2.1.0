@@ -292,7 +292,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     data.rewind();
     byte[] arr = new byte[data.remaining()];
     data.get(arr);
-    SimpleRpcServer.LOG.warn("RDMA normal data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+    //SimpleRpcServer.LOG.warn("RDMA normal data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
 
     try {
       if (skipInitialSaslHandshake) {

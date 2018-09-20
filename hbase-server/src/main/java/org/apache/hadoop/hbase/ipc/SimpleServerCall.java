@@ -82,10 +82,10 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
   @Override///TODO rgy add rdma supplicant of this fun
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
-    SimpleRpcServer.LOG.warn("RDMA ？ sendResponseIfReady");
+    //SimpleRpcServer.LOG.warn("RDMA ？ sendResponseIfReady");
     this.param = null;
     if(this.isRdma){
-      SimpleRpcServer.LOG.warn("RDMA: processResponse");
+      SimpleRpcServer.LOG.warn("RDMA: sendResponseIfReady");
       SimpleServerRdmaRpcConnection.processResponse(this.rdmaconn,this);//TODO change to rdmahandler
     }else{
       this.responder.doRespond(getConnection(), this);

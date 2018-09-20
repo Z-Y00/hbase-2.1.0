@@ -644,9 +644,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
           call.span)) {
 
-      LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
-      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
-      +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
+      //LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
+      //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
+      //+StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        LOG.warn("RDMA get a call with callMd "+ callMd);
       if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get") || (callMd.equals("Multi")) || (callMd.equals("Scan")))))
@@ -708,7 +708,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       cellBlockMeta = null;
     }
     RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
-    //this.qp=rdmaConnect("11.11.0.111",rdmaPort); //TODO temp fix
     LOG.warn("RDMA init done L726");
     LOG.warn("RDMA rdmaConnect L727 with addr and port "+rdmaPort);
     
@@ -739,9 +738,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
       ByteBuffer tmp = ByteBuffer.wrap(sbuf);
       directbuf.put(tmp);
-
-      LOG.warn("RDMA writeQuery with the buf "+StandardCharsets.UTF_8.decode(directbuf).toString());
-      LOG.warn("RDMA writeQuery with the tmp buf "+StandardCharsets.UTF_8.decode(tmp).toString());
       if(!rdmaconn.writeQuery(directbuf))
       LOG.warn("RDMA writeQuery failed");
 
@@ -840,13 +836,16 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       }
     }
   }
-  private void readRdmaResponse() {
+  private void readRdmaResponse() {//TODO rgy fork a thread to wait for the rdma respond
     LOG.warn("RDMA readRdmaResponse");
     Call call = null;
     boolean expectedCall = false;
     try {
       ByteBuffer rbuf=this.rdmaconn.readResponse();
-      rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf.array(),rbuf.arrayOffset(),rbuf.limit()));//TODO check if this is right
+      LOG.warn("RDMA get rbuf readResponse! with length and content "+rbuf.remaining()+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
+      byte[] arr = new byte[rbuf.remaining()];
+      rbuf.get(arr);
+      rdma_in=new DataInputStream(new ByteArrayInputStream(arr));
       // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
       int totalSize = rdma_in.readInt();
@@ -856,7 +855,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       int id = responseHeader.getCallId();
       call = calls.remove(id); // call.done have to be set before leaving this method
       expectedCall = (call != null && !call.isDone());
-      if (!expectedCall) {
+      if (!expectedCall) {//TODO RGY error handleing for timeout
         // So we got a response for which we have no corresponding 'call' here on the client-side.
         // We probably timed out waiting, cleaned up all references, and now the server decides
         // to return a response. There is nothing we can do w/ the response at this stage. Clean
@@ -867,8 +866,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         IOUtils.skipFully(in, whatIsLeftToRead);
         if (call != null) {
           call.callStats.setResponseSizeBytes(totalSize);
+          // no need to wait for the rdma buffer
           call.callStats
-              .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+              .setCallTimeMs(1000L);//force time, for it is no good for rdma to get time
         }
         return;
       }
@@ -878,7 +878,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.setException(re);
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
-            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+            .setCallTimeMs(1000L);
         if (isFatalConnectionException(exceptionResponse)) {
           synchronized (this) {
             closeConn(re);
@@ -905,8 +905,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.setResponse(value, cellBlockScanner);
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
-            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
+            .setCallTimeMs(1000L);
       }
+      LOG.warn("RDMA  readRdmaResponse! done");
     } catch (IOException e) {
       if (expectedCall) {
         call.setException(e);

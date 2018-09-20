@@ -85,7 +85,12 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.connectionHeaderRead=true;
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
-    this.hostAddress = " RDMA ";
+    this.hostAddress = "10.10.0.112";//tmp fix
+    try {
+      this.addr=InetAddress.getByName(this.hostAddress);
+    } catch (Exception e) {
+      SimpleRpcServer.LOG.warn("RDMA init addr failed");
+    }
     this.remotePort = port;
     this.rdmaresponder = rpcServer.rdmaresponder;
     SimpleRpcServer.LOG.warn("RDMA init rdmaconn L98 simpleserverRdmaconn.java");
@@ -112,7 +117,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       this.rbuf=rdmaconn.readQuery();
       this.rbuf.rewind();
       //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
-      SimpleRpcServer.LOG.warn("RDMA isReadable get rbuf with length and content "+rbuf.remaining() +" "+ StandardCharsets.UTF_8.decode(rbuf).toString());
+      //SimpleRpcServer.LOG.warn("RDMA isReadable get rbuf with length and content "+rbuf.remaining() +" "+ StandardCharsets.UTF_8.decode(rbuf).toString());
       return true;
     } else {
       return false;
@@ -217,7 +222,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       byte[] arr = new byte[rbuf.remaining()];
       rbuf.get(arr);
       data.put(arr,0,dataLength);
-      SimpleRpcServer.LOG.warn("RDMA rbuf data section content" +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+      //SimpleRpcServer.LOG.warn("RDMA rbuf data section content" +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
       process();
 
     return count;
