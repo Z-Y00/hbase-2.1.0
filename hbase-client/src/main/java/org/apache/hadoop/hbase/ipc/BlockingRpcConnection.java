@@ -649,7 +649,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        LOG.warn("RDMA get a call with callMd "+ callMd);
-      if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get")) || (callMd.equals("Multi")) || (callMd.equals("Scan"))))
+      if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get") || (callMd.equals("Multi")) || (callMd.equals("Scan")))))
         {
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
@@ -729,7 +729,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
     calls.put(call.id, call); // We put first as we don't want the connection to become idle.
     // from here, we do not throw any exception to upper layer as the call has been tracked in the
-    // pending calls map.
+    // pending calls map.  
     try {
       call.callStats.setRequestSizeBytes(write(this.rdma_out, requestHeader, call.param, cellBlock));
       

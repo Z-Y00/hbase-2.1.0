@@ -410,6 +410,9 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
 
   @Override
   public long disconnectSince() {
+    if(!(this.rdmaconn==null)){
+      return -1L;
+    }
     if (!this.connection.isConnectionOpen()) {
       return System.currentTimeMillis() - receiveTime;
     } else {

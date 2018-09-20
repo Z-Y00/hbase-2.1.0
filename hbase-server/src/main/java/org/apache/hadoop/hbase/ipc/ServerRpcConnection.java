@@ -507,6 +507,7 @@ abstract class ServerRpcConnection implements Closeable {
     String serviceName = connectionHeader.getServiceName();
     if (serviceName == null) throw new EmptyServiceNameException();
     this.service = RpcServer.getService(this.rpcServer.services, serviceName);
+    RpcServer.LOG.warn("RDMA debug get the service "+serviceName);
     if (this.service == null) throw new UnknownServiceException(serviceName);
     setupCellBlockCodecs(this.connectionHeader);
     RPCProtos.ConnectionHeaderResponse.Builder chrBuilder =
@@ -620,10 +621,10 @@ abstract class ServerRpcConnection implements Closeable {
     RequestHeader header = (RequestHeader) builder.build();
     offset += headerSize;
     int id = header.getCallId();
-    if (RpcServer.LOG.isTraceEnabled()) {
-      RpcServer.LOG.trace("RequestHeader " + TextFormat.shortDebugString(header)
-          + " totalRequestSize: " + totalRequestSize + " bytes");
-    }
+    //if (RpcServer.LOG.isTraceEnabled()) {
+      RpcServer.LOG.warn("RequestHeader " + TextFormat.shortDebugString(header)//debug rgy
+          + " totalRequestSize: " + totalRequestSize + " bytes"+" and the service "+this.service);
+    //}
     // Enforcing the call queue size, this triggers a retry in the client
     // This is a bit late to be doing this check - we have already read in the
     // total request.
@@ -643,6 +644,15 @@ abstract class ServerRpcConnection implements Closeable {
     CellScanner cellScanner = null;
     try {
       if (header.hasRequestParam() && header.getRequestParam()) {
+        if(this.service==null) {
+          RpcServer.LOG.warn("RDMA service == null, we will init it here");
+        //TODO get the service here RegionServerStatusService or MasterService or ClientService
+        //https://www.cnblogs.com/superhedantou/p/5840631.html
+
+        //TODO get the rdma conn reuse and get the init buffer
+
+        this.service = RpcServer.getService(this.rpcServer.services, "ClientService");
+      }
         md = this.service.getDescriptorForType().findMethodByName(
             header.getMethodName());
         if (md == null)

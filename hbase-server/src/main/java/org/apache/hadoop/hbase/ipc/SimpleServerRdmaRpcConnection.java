@@ -72,7 +72,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   //final RdmaHandler rdmahandler;
 
   // If initial preamble with version and magic has been read or not.
-  private boolean connectionPreambleRead = false;
+  private boolean connectionPreambleRead = true;//we drop it in rdma
 
   final ConcurrentLinkedDeque<RpcResponse> responseQueue = new ConcurrentLinkedDeque<>();
   final Lock responseWriteLock = new ReentrantLock();
@@ -82,9 +82,10 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       long lastContact) {
     super(rpcServer);
     this.lastContact = lastContact;
+    this.connectionHeaderRead=true;
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
-    this.hostAddress = null;
+    this.hostAddress = " RDMA ";
     this.remotePort = port;
     this.rdmaresponder = rpcServer.rdmaresponder;
     SimpleRpcServer.LOG.warn("RDMA init rdmaconn L98 simpleserverRdmaconn.java");
