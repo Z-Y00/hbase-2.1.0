@@ -82,7 +82,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       long lastContact) {
     super(rpcServer);
     this.lastContact = lastContact;
-    this.connectionHeaderRead=true;
+    this.connectionHeaderRead=false;
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
     this.hostAddress = "10.10.0.112";//tmp fix
@@ -117,7 +117,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       this.rbuf=rdmaconn.readQuery();
       this.rbuf.rewind();
       //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
-      //SimpleRpcServer.LOG.warn("RDMA isReadable get rbuf with length and content "+rbuf.remaining() +" "+ StandardCharsets.UTF_8.decode(rbuf).toString());
+      SimpleRpcServer.LOG.warn("RDMA isReadable get rbuf with length and content "
+      +rbuf.remaining() +" "+ StandardCharsets.UTF_8.decode(rbuf).toString());
       return true;
     } else {
       return false;
@@ -133,15 +134,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     rpcCount.increment();
   }
 
-  // //taken from stack overflow
-  // public static int transferAsMuchAsPossible(ByteBuffer bbuf_dest, ByteBuffer bbuf_src) {
-  //   int nTransfer = Math.min(bbuf_dest.remaining(), bbuf_src.remaining());
-  //   if (nTransfer > 0) {
-  //     bbuf_dest.put(bbuf_src.array(), bbuf_src.arrayOffset() + bbuf_src.position(), nTransfer);
-  //     bbuf_src.position(bbuf_src.position() + nTransfer);
-  //   }
-  //   return nTransfer;
-  // }
+
   public static int bufcopy(ByteBuffer src, ByteBuffer dst){
     int i=0;
     while (src.hasRemaining()&&dst.hasRemaining())
@@ -205,24 +198,36 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       dataLengthBuffer.flip();
       int dataLength = dataLengthBuffer.getInt();
       SimpleRpcServer.LOG.warn("RDMA readAndProcess get int dataLength "+ dataLength);
+      int realDataLength=rbuf.remaining();
 
-      // Initialize this.data with a ByteBuff.
-      // This call will allocate a ByteBuff to read request into and assign to this.data
-      // Also when we use some buffer(s) from pool, it will create a CallCleanup instance also and
-      // assign to this.callCleanup
-      initByteBuffToReadInto(dataLength);
+ {
+      initByteBuffToReadInto(dataLength);// TODO rgy
 
-      // Increment the rpc count. This counter will be decreased when we write
-      // the response. If we want the connection to be detected as idle properly, we
-      // need to keep the inc / dec correct.
       incRpcCount();
-    //}
 
-      SimpleRpcServer.LOG.warn("RDMA rbuf data section with length "+ rbuf.remaining());
-      byte[] arr = new byte[rbuf.remaining()];
+      SimpleRpcServer.LOG.warn("RDMA first rbuf data section with length " + rbuf.remaining());
+      byte[] arr = new byte[dataLength];
       rbuf.get(arr);
-      data.put(arr,0,dataLength);
-      //SimpleRpcServer.LOG.warn("RDMA rbuf data section content" +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+      data.put(arr, 0, dataLength);// debug
+      //data.put(arr,0,realDataLength);
+      SimpleRpcServer.LOG.warn("RDMA first rbuf data section content" +" "+
+      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+    }
+      process();
+      if (!connectionHeaderRead)// force drop the conn header after first rbuf
+      SimpleRpcServer.LOG.warn("RDMA !connectionHeaderRead");
+      {
+        int trueDataLength = realDataLength - dataLength;
+        initByteBuffToReadInto(trueDataLength);
+        incRpcCount();
+        
+        byte[] arr = new byte[trueDataLength];
+        rbuf.get(arr);//read the left things
+        data.put(arr, 0, trueDataLength);
+        SimpleRpcServer.LOG.warn("RDMA later rbuf data section content" +" "+
+        StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+  
+      } 
       process();
 
     return count;
@@ -269,9 +274,10 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
   @Override
   public synchronized void close() {
-    if(!rdmaconn.close())
+    SimpleRpcServer.LOG.warn("RDMA refuse to close !!!");
+    //if(!rdmaconn.close())
     {
-      SimpleRpcServer.LOG.warn("RDMA close failed L275");
+      //SimpleRpcServer.LOG.warn("RDMA close failed L275");
     }
     //rdma.rdmaDestroyGlobal();
     data = null;

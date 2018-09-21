@@ -102,9 +102,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   protected Socket socket = null;
   private DataInputStream in;
   private DataOutputStream out;
-  private DataInputStream rdma_in;
-  private DataOutputStream rdma_out;
-  private ByteArrayOutputStream rdma_out_stream;
+  private DataInputStream rdma_in = null;
+  private DataOutputStream rdma_out = null ;
+  private ByteArrayOutputStream rdma_out_stream = null;
   private static RdmaNative rdma = new RdmaNative();
   private RdmaNative.RdmaClientConnection rdmaconn;//init this at L723 
 
@@ -532,6 +532,17 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     thread.start();
   }
   private void setupRdmaIOstreams() throws IOException {
+    if(this.rdma_out!=null){//this is already set
+      LOG.warn("RDMA setupRdmaIOstreams conn reuse");
+      return ;
+    }
+    LOG.warn("RDMA rdmaConnect L538 with addr and port "+rdmaPort);
+    
+    do this.rdmaconn=rdma.rdmaConnect("11.11.0.111",rdmaPort);
+    while (this.rdmaconn==null);  
+    LOG.warn("RDMA rdmaConnect done "+this.rdmaconn);
+    this.rdma_out_stream = new ByteArrayOutputStream();
+    this.rdma_out = new DataOutputStream(this.rdma_out_stream);
     LOG.warn("RDMA setupRdmaIOstreams");
     if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
       if (LOG.isDebugEnabled()) {
@@ -547,9 +558,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         LOG.debug("Connecting to " + remoteId.address);
       }
         // Write out the preamble -- MAGIC, version, and auth to use.
-        rdma_out.write(connectionHeaderPreamble);
-        // Now write out the connection header
-        rdma_out.write(connectionHeaderWithLength); 
+        //rdma_out.write(connectionHeaderPreamble);//to preambleBuffer connectionPreambleRead
+        // Now write out the connection header//
+        //this will init the servie and usr ugi
+        rdma_out.write(connectionHeaderWithLength);//essential connectionHeaderRead
  
     } catch (Throwable t) {
       IOException e = ExceptionUtil.asInterrupt(t);
@@ -644,17 +656,21 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
           call.span)) {
 
-      //LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
-      //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
-      //+StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
+      LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
+      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
+      +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
-       LOG.warn("RDMA get a call with callMd "+ callMd);
-      if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get") || (callMd.equals("Multi")) || (callMd.equals("Scan")))))
+       
+      if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Scan"))))
+      
+      //if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get") || (callMd.equals("Multi")) || (callMd.equals("Scan")))))
         {
+          LOG.warn("RDMA get a call with callMd "+ callMd);
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
       else
-        writeRequest(call);
+      {LOG.warn("RDMA get a normal call with callMd "+ callMd);
+        writeRequest(call);}
     }
   }
 
@@ -699,6 +715,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     notifyAll();
   }
   private void writeRdmaRequest(Call call) throws IOException {
+    LOG.warn("RDMA writeRdmaRequest");
     ByteBuffer cellBlock = this.rpcClient.cellBlockBuilder.buildCellBlock(this.codec,
       this.compressor, call.cells);
     CellBlockMeta cellBlockMeta;
@@ -708,16 +725,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       cellBlockMeta = null;
     }
     RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
-    LOG.warn("RDMA init done L726");
-    LOG.warn("RDMA rdmaConnect L727 with addr and port "+rdmaPort);
     
-    do this.rdmaconn=rdma.rdmaConnect("11.11.0.111",rdmaPort);
-    while (this.rdmaconn==null);  
-    LOG.warn("RDMA rdmaConnect done "+this.rdmaconn);
-    this.rdma_out_stream = new ByteArrayOutputStream();
-    this.rdma_out = new DataOutputStream(this.rdma_out_stream);
 
-    //setupRdmaIOstreams();
+
+    setupRdmaIOstreams();
 
     // Now we're going to write the call. We take the lock, then check that the connection
     // is still valid, and, if so we do the write to the socket. If the write fails, we don't

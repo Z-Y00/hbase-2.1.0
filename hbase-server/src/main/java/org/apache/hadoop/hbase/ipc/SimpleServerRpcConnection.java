@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.util.Pair;
 class SimpleServerRpcConnection extends ServerRpcConnection {
 
   final SocketChannel channel;
-  //final RdmaChannel rdmaConn;
   private ByteBuff data;
   private ByteBuffer dataLengthBuffer;
   private ByteBuffer preambleBuffer;
@@ -303,6 +302,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       if (useSasl) {
         saslReadAndProcess(data);
       } else {
+        SimpleRpcServer.LOG.warn("normal processOneRpc");
         processOneRpc(data);
       }
 

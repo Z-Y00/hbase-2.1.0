@@ -454,7 +454,7 @@ abstract class ServerRpcConnection implements Closeable {
       InterruptedException {
         byte[] arr = new byte[buf.remaining()];
         buf.get(arr);
-    //SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+    SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
 
     if (connectionHeaderRead) {
       processRequest(buf);
@@ -559,7 +559,7 @@ abstract class ServerRpcConnection implements Closeable {
     } else {
       version = "UNKNOWN";
     }
-    RpcServer.AUDITLOG.info("Connection from {}:{}, version={}, sasl={}, ugi={}, service={}",
+    RpcServer.AUDITLOG.warn("Connection from {}:{}, version={}, sasl={}, ugi={}, service={}",
         this.hostAddress, this.remotePort, version, this.useSasl, this.ugi, serviceName);
   }
 
@@ -621,10 +621,10 @@ abstract class ServerRpcConnection implements Closeable {
     RequestHeader header = (RequestHeader) builder.build();
     offset += headerSize;
     int id = header.getCallId();
-    if (RpcServer.LOG.isTraceEnabled()) {
+    //if (RpcServer.LOG.isTraceEnabled()) {
       RpcServer.LOG.warn("RequestHeader " + TextFormat.shortDebugString(header)//debug rgy
           + " totalRequestSize: " + totalRequestSize + " bytes"+" and the service "+this.service);
-    }
+    //}
     // Enforcing the call queue size, this triggers a retry in the client
     // This is a bit late to be doing this check - we have already read in the
     // total request.
@@ -651,7 +651,7 @@ abstract class ServerRpcConnection implements Closeable {
 
         //TODO get the rdma conn reuse and get the init buffer
 
-        this.service = this.rpcServer.getService(this.rpcServer.services, "ClientService");
+        this.service = RpcServer.getService(this.rpcServer.services, "ClientService");
       }
         md = this.service.getDescriptorForType().findMethodByName(
             header.getMethodName());
