@@ -452,13 +452,19 @@ abstract class ServerRpcConnection implements Closeable {
 
   public void processOneRpc(ByteBuff buf) throws IOException,
       InterruptedException {
+        int rbuflength = buf.remaining();
         byte[] arr = new byte[buf.remaining()];
         buf.get(arr);
-    SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+        buf.rewind();
+    SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content and length"
+     +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString()+" length "+
+     rbuflength);
 
     if (connectionHeaderRead) {
+      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");
       processRequest(buf);
     } else {
+      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processConnectionHeader");
       processConnectionHeader(buf);
       this.connectionHeaderRead = true;
       if (!authorizeConnection()) {
@@ -648,9 +654,6 @@ abstract class ServerRpcConnection implements Closeable {
           RpcServer.LOG.warn("RDMA service == null, we will init it here");
         //TODO get the service here RegionServerStatusService or MasterService or ClientService
         //https://www.cnblogs.com/superhedantou/p/5840631.html
-
-        //TODO get the rdma conn reuse and get the init buffer
-
         this.service = RpcServer.getService(this.rpcServer.services, "ClientService");
       }
         md = this.service.getDescriptorForType().findMethodByName(

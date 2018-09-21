@@ -180,57 +180,64 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
    * @throws InterruptedException
    */
   public int readAndProcess() throws IOException, InterruptedException {//TODO RGY change to better responder
-    SimpleRpcServer.LOG.warn("RDMA readAndProcess  L185");
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess  L183");
+
+    if (!connectionHeaderRead)// force drop the conn header after first rbuf
+    SimpleRpcServer.LOG.warn("RDMA Header not read !!!!!!! is this header?");
 
     rbuf.rewind();
     dataLengthBuffer.rewind();
     // Try and read in an int. it will be length of the data to read (or -1 if a ping). We catch the
     // integer length into the 4-byte this.dataLengthBuffer.
     int count = read4Bytes();
-    SimpleRpcServer.LOG.warn("RDMA readAndProcess read4Bytes with count2 "+ count);
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess read4Bytes with count "+ count);
     if (count < 0 || dataLengthBuffer.remaining() > 0) {
       return count;
     }
 
-    // We have read a length and we have read the preamble. It is either the connection header
-    // or it is a request.
-    //if (data == null) { TODO RGY debugging always init the data buffer
+    //if (data == null) { //TODO RGY debugging always init the data buffer
       dataLengthBuffer.flip();
       int dataLength = dataLengthBuffer.getInt();
-      SimpleRpcServer.LOG.warn("RDMA readAndProcess get int dataLength "+ dataLength);
+      SimpleRpcServer.LOG.warn("RDMA readAndProcess get first int dataLength "+ dataLength);
       int realDataLength=rbuf.remaining();
 
- {
-      initByteBuffToReadInto(dataLength);// TODO rgy
+ 
+      initByteBuffToReadInto(dataLength);
 
       incRpcCount();
 
-      SimpleRpcServer.LOG.warn("RDMA first rbuf data section with length " + rbuf.remaining());
+      SimpleRpcServer.LOG.warn("RDMA rbuf data section with length " + rbuf.remaining());
       byte[] arr = new byte[dataLength];
       rbuf.get(arr);
       data.put(arr, 0, dataLength);// debug
       //data.put(arr,0,realDataLength);
-      SimpleRpcServer.LOG.warn("RDMA first rbuf data section content" +" "+
+      SimpleRpcServer.LOG.warn("RDMA rbuf data section content" +" "+
       StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
-    }
+
       process();
-      if (!connectionHeaderRead)// force drop the conn header after first rbuf
-      SimpleRpcServer.LOG.warn("RDMA !connectionHeaderRead");
+
+
+      if (realDataLength>dataLength) {
+        SimpleRpcServer.LOG.warn("RDMA header done,readAndProcess core buffer");
+        if (!connectionHeaderRead)// force drop the conn header after first rbuf
+      SimpleRpcServer.LOG.warn("RDMA Header not read !!!!!!! header wrong?");
       {
-        int trueDataLength = realDataLength - dataLength;
+        //count = read4Bytes();//drop the first 4bytes
+        int trueDataLength = realDataLength - dataLength - 4;
         initByteBuffToReadInto(trueDataLength);
         incRpcCount();
         
-        byte[] arr = new byte[trueDataLength];
-        rbuf.get(arr);//read the left things
-        data.put(arr, 0, trueDataLength);
-        SimpleRpcServer.LOG.warn("RDMA later rbuf data section content" +" "+
-        StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
-  
-      } 
-      process();
+        byte[] arr2 = new byte[trueDataLength];
+        rbuf.get(arr2);//read the left things
+        data.put(arr2, 4, trueDataLength);//drop the first int
+        SimpleRpcServer.LOG.warn("RDMA later rbuf data section content and length(-4) "+ trueDataLength+" "+
+        StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr2)).toString());
+        
+        process();
+      }
+    }
 
-    return count;
+    return dataLength;//return what we've read if -1, we will close it
   }
 
   // It creates the ByteBuff and CallCleanup and assign to Connection instance.

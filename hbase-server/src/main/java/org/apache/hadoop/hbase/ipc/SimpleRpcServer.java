@@ -430,14 +430,7 @@ public class SimpleRpcServer extends RpcServer {
       private synchronized void doRunLoop() {
         while (running) {
           try {
-            // Consume as many connections as currently queued to avoid
-            // unbridled acceptance of connections that starves the select
-            //int size = pendingConnections.size();
-            // for (int i=size; i>0; i--) {
-            //   SimpleServerRdmaRpcConnection conn = pendingConnections.take();
-            //   //conn.channel.register(readSelector, SelectionKey.OP_READ, conn);
-            // }
-            //readSelector.select();
+
             Iterator<SimpleServerRdmaRpcConnection> iter = pendingConnections.iterator();
             while (iter.hasNext()) {
               SimpleServerRdmaRpcConnection  rdma_conn= iter.next();
@@ -445,7 +438,6 @@ public class SimpleRpcServer extends RpcServer {
                   doRead(rdma_conn);
                   iter.remove();
                 }
-              rdma_conn = null;
             }
           } catch (InterruptedException e) {
             if (running) {                      // unexpected -- log it
@@ -470,7 +462,7 @@ public class SimpleRpcServer extends RpcServer {
           throw ieo;
         } catch (Exception e) {
           if (LOG.isDebugEnabled()) {
-            LOG.debug("Caught exception while RDMA  reading:", e);
+            LOG.debug("Caught exception while readAndProcess RDMA:", e);
           }
           count = -1; //so that the (count < 0) block is executed
         }

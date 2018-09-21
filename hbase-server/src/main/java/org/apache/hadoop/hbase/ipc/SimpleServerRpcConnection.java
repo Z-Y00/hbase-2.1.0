@@ -243,10 +243,18 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       // the response. If we want the connection to be detected as idle properly, we
       // need to keep the inc / dec correct.
       incRpcCount();
+      SimpleRpcServer.LOG.warn("RDMA normal init databuff");
     }
 
     count = channelDataRead(channel, data);
-
+    //debug dump rgy
+    byte[] arr = new byte[data.remaining()];
+    data.put(arr);
+    SimpleRpcServer.LOG.warn("RDMA normal get data section content" +" "+
+    StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+    data.rewind();
+    //rewind to get it back
+    
     if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
       process();
     }
