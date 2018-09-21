@@ -1491,6 +1491,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
       throw new RegionServerStoppedException("File system not available");
     }
     if (!regionServer.isOnline()) {
+      LOG.warn("RDMA debug calling this rsrpc for server "+regionServer.serverName);
       throw new ServerNotRunningYetException("Server " + regionServer.serverName
           + " is not running yet");
     }

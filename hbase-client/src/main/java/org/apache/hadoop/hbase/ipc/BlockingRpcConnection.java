@@ -533,7 +533,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
   private void setupRdmaIOstreams() throws IOException {
     if(this.rdma_out!=null){//this is already set
-      LOG.warn("RDMA setupRdmaIOstreams conn reuse");
+      LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
+      //this.rdma_out.close();
+      this.rdma_out_stream.reset();//clear the underlying one.
       return ;
     }
     LOG.warn("RDMA rdmaConnect L538 with addr and port "+rdmaPort);
@@ -674,13 +676,13 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        
-      if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Scan"))))
+      if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Scan"))))//debug
       
       //if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get") || (callMd.equals("Multi")) || (callMd.equals("Scan")))))
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
-        //writeRdmaRequest(call);}
-        writeRequest(call);}//debugging
+        writeRdmaRequest(call);}
+        //writeRequest(call);}//debugging
       else
       {LOG.warn("RDMA get a normal call with callMd "+ callMd);
         writeRequest(call);}
@@ -862,25 +864,27 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
   }
   private void readRdmaResponse() {//TODO rgy fork a thread to wait for the rdma respond
-    LOG.warn("RDMA readRdmaResponse");
+    LOG.warn("RDMA Rdma waiting for Response");
     Call call = null;
     boolean expectedCall = false;
     try {
       ByteBuffer rbuf=this.rdmaconn.readResponse();
       LOG.warn("RDMA get rbuf readResponse! with length and content "+rbuf.remaining()+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
+      rbuf.rewind();
       byte[] arr = new byte[rbuf.remaining()];
       rbuf.get(arr);
       rdma_in=new DataInputStream(new ByteArrayInputStream(arr));
       // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
       int totalSize = rdma_in.readInt();
+      LOG.warn("RDMA get rbuf readResponse! with totalSize "+totalSize);
 
       // Read the header
-      ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(in);
+      ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(rdma_in);
       int id = responseHeader.getCallId();
       call = calls.remove(id); // call.done have to be set before leaving this method
       expectedCall = (call != null && !call.isDone());
-      if (!expectedCall) {//TODO RGY error handleing for timeout
+      if (!expectedCall) {
         // So we got a response for which we have no corresponding 'call' here on the client-side.
         // We probably timed out waiting, cleaned up all references, and now the server decides
         // to return a response. There is nothing we can do w/ the response at this stage. Clean
@@ -888,16 +892,17 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // this connection.
         int readSoFar = getTotalSizeWhenWrittenDelimited(responseHeader);
         int whatIsLeftToRead = totalSize - readSoFar;
-        IOUtils.skipFully(in, whatIsLeftToRead);
+        IOUtils.skipFully(rdma_in, whatIsLeftToRead);
         if (call != null) {
           call.callStats.setResponseSizeBytes(totalSize);
-          // no need to wait for the rdma buffer
           call.callStats
-              .setCallTimeMs(1000L);//force time, for it is no good for rdma to get time
+              .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
         }
         return;
       }
+      //no time out for rdma
       if (responseHeader.hasException()) {
+        LOG.warn("RDMA hasException! ");
         ExceptionResponse exceptionResponse = responseHeader.getException();
         RemoteException re = createRemoteException(exceptionResponse);
         call.setException(re);
@@ -910,10 +915,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           }
         }
       } else {
+        LOG.warn("RDMA noException! ");
         Message value = null;
         if (call.responseDefaultType != null) {
           Builder builder = call.responseDefaultType.newBuilderForType();
-          ProtobufUtil.mergeDelimitedFrom(builder, in);
+          ProtobufUtil.mergeDelimitedFrom(builder, rdma_in);
           value = builder.build();
         }
         CellScanner cellBlockScanner = null;
@@ -922,7 +928,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           byte[] cellBlock = new byte[size];
 
             IOUtils.readFully(this.rdma_in, cellBlock, 0, cellBlock.length);
-  
           
           cellBlockScanner = this.rpcClient.cellBlockBuilder.createCellScanner(this.codec,
             this.compressor, cellBlock);
@@ -930,7 +935,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.setResponse(value, cellBlockScanner);
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
-            .setCallTimeMs(1000L);
+            .setCallTimeMs(1000L);//TODO change back! this is call time out, not rdma time out
       }
       LOG.warn("RDMA  readRdmaResponse! done");
     } catch (IOException e) {

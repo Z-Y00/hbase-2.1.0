@@ -243,18 +243,20 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       // the response. If we want the connection to be detected as idle properly, we
       // need to keep the inc / dec correct.
       incRpcCount();
-      SimpleRpcServer.LOG.warn("RDMA normal init databuff");
+      SimpleRpcServer.LOG.warn("RDMA normal init databuff with length "+dataLength);
     }
 
     count = channelDataRead(channel, data);
     //debug dump rgy
-    byte[] arr = new byte[data.remaining()];
-    data.put(arr);
-    SimpleRpcServer.LOG.warn("RDMA normal get data section content" +" "+
-    StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
-    data.rewind();
+    // byte[] arr = new byte[data.remaining()];//don't do the dump here!!
+    // data.put(arr);
+    // SimpleRpcServer.LOG.warn("RDMA normal get data section content" +" "+
+    // StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+    // data.rewind();
     //rewind to get it back
-    
+
+    SimpleRpcServer.LOG.warn("RDMA normal read data with length "+count);
+
     if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
       process();
     }
@@ -299,7 +301,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     data.rewind();
     byte[] arr = new byte[data.remaining()];
     data.get(arr);
-    //SimpleRpcServer.LOG.warn("RDMA normal data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+    SimpleRpcServer.LOG.warn("RDMA normal data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
 
     try {
       if (skipInitialSaslHandshake) {

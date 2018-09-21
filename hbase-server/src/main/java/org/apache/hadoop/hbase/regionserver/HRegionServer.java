@@ -1527,6 +1527,7 @@ public class HRegionServer extends HasThread implements
           Long.toHexString(this.zooKeeper.getRecoverableZooKeeper().getSessionId()));
 
       // Wake up anyone waiting for this server to online
+      LOG.warn("RDMA debug we are online!");//OMG,the normal call didnot check if this is online!!
       synchronized (online) {
         online.set(true);
         online.notifyAll();

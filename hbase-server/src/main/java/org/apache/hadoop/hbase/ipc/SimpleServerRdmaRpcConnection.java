@@ -223,19 +223,20 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       SimpleRpcServer.LOG.warn("RDMA Header not read !!!!!!! header wrong?");
       {
         //count = read4Bytes();//drop the first 4bytes
-        int trueDataLength = realDataLength - dataLength - 4;
+        int trueDataLength = realDataLength - dataLength ;
         initByteBuffToReadInto(trueDataLength);
         incRpcCount();
         
         byte[] arr2 = new byte[trueDataLength];
         rbuf.get(arr2);//read the left things
-        data.put(arr2, 4, trueDataLength);//drop the first int
-        SimpleRpcServer.LOG.warn("RDMA later rbuf data section content and length(-4) "+ trueDataLength+" "+
+        data.put(arr2, 4, trueDataLength - 4);//drop the first int
+        SimpleRpcServer.LOG.warn("RDMA later rbuf data section content and length "+ trueDataLength+" "+
         StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr2)).toString());
         
         process();
       }
     }
+    SimpleRpcServer.LOG.warn("RDMA normal buf, no header");
 
     return dataLength;//return what we've read if -1, we will close it
   }
@@ -269,8 +270,11 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
    */
   private void process() throws IOException, InterruptedException {
     data.rewind();
+    byte[] arr = new byte[data.remaining()];
+    data.get(arr);
+    SimpleRpcServer.LOG.warn("RDMA data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+
     try {
-      SimpleRpcServer.LOG.warn("RDMA processOneRpc");
         processOneRpc(data);
     } finally {
       dataLengthBuffer.clear(); // Clean for the next call
