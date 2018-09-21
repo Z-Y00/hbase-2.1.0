@@ -91,7 +91,7 @@ public class CallRunner {
     this.rpcServer = null;
   }
 
-  public void run() {
+  public void run() {//RDMA DEBUG
     try {
       if (call.disconnectSince() >= 0) {
         if (RpcServer.LOG.isDebugEnabled()) {

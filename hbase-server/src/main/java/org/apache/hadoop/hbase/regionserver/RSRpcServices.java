@@ -3234,7 +3234,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
    * @throws ServiceException
    */
   @Override
-  public ScanResponse scan(final RpcController controller, final ScanRequest request)
+  public ScanResponse scan(final RpcController controller, final ScanRequest request)//RDMA ! trace back
       throws ServiceException {
     if (controller != null && !(controller instanceof HBaseRpcController)) {
       throw new UnsupportedOperationException(

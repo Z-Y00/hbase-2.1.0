@@ -108,7 +108,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private static RdmaNative rdma = new RdmaNative();
   private RdmaNative.RdmaClientConnection rdmaconn;//init this at L723 
 
-  public int rdmaPort=2333;
+  public final int rdmaPort;
   private HBaseSaslRpcClient saslRpcClient;
 
   // currently active calls
@@ -240,6 +240,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     header.writeTo(dos);
     assert baos.size() == 4 + header.getSerializedSize();
     this.connectionHeaderWithLength = baos.getBuffer();
+    this.rdmaPort=2333;//remoteId.getAddress().getPort()+1;//plus one
 
     UserGroupInformation ticket = remoteId.ticket.getUGI();
     this.threadName = "IPC Client (" + this.rpcClient.socketFactory.hashCode() + ") connection to "
@@ -538,9 +539,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       this.rdma_out_stream.reset();//clear the underlying one.
       return ;
     }
-    LOG.warn("RDMA rdmaConnect L538 with addr and port "+rdmaPort);
+    LOG.warn("RDMA rdmaConnect L538 with addr and port "+this.rdmaPort);
     
-    do this.rdmaconn=rdma.rdmaConnect("11.11.0.111",rdmaPort);
+    do this.rdmaconn=rdma.rdmaConnect("11.11.0.111",this.rdmaPort);
     while (this.rdmaconn==null);  
     this.rdma_out_stream = new ByteArrayOutputStream();
     this.rdma_out = new DataOutputStream(this.rdma_out_stream);
@@ -677,7 +678,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
        String callMd = call.md.getName();
        
       if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Scan"))))//debug
-      
+      //for these belongs to one regionserver, so we get it to that same conn
       //if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get") || (callMd.equals("Multi")) || (callMd.equals("Scan")))))
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);

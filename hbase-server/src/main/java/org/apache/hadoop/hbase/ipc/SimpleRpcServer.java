@@ -384,11 +384,16 @@ public class SimpleRpcServer extends RpcServer {
 
     public RdmaListener(final String name) throws IOException {
       super(name);
+      
       // The backlog of requests that we will have the serversocket carry.
       int backlogLength = conf.getInt("hbase.ipc.server.listen.queue.size", 128);
       readerPendingConnectionQueueLength =
           conf.getInt("hbase.ipc.server.read.connection-queue.size", 100);
       // Create a new server socket and set to non blocking mode
+
+      if(port==16000){//drop for master
+        return;
+      }
 
       readers = new Reader[readThreads];
       // Why this executor thing? Why not like hadoop just start up all the threads? I suppose it
@@ -481,7 +486,7 @@ public class SimpleRpcServer extends RpcServer {
       justification="selector access is not synchronized; seems fine but concerned changing " +
         "it will have per impact")
     public void run() {
-      SimpleRpcServer.LOG.warn("RDMA listener start and bind at port "+ rdmaPort);
+      SimpleRpcServer.LOG.warn("RDMA listener start and bind at port "+ rdmaPort+" this rpcserver is at port "+port);
       LOG.info(getName() + ": starting");
       int i=1;
       while (running) {
@@ -532,9 +537,10 @@ public class SimpleRpcServer extends RpcServer {
     // Start the listener here and let it bind to the port
     listener = new Listener(name);
     this.port = listener.getAddress().getPort();
-    rdmalistener = new RdmaListener(name);
-    this.rdmaPort=2333;//TODO get it from conf
-    //this.rdmaPort = rdmalistener.getAddress().getPort();
+    if(this.port==16020){
+      rdmalistener = new RdmaListener(name);
+      this.rdmaPort=2333;//TODO get it from conf  wtf!!! there are two !!
+    }
 
     // Create the responder here
     responder = new SimpleRpcServerResponder(this);
@@ -584,7 +590,10 @@ public class SimpleRpcServer extends RpcServer {
     HBasePolicyProvider.init(conf, authManager);
     responder.start();
     listener.start();
-    rdmalistener.start();
+    if(this.port==16020){
+      rdmalistener.start();
+    }
+    
     scheduler.start();
     started = true;
   }

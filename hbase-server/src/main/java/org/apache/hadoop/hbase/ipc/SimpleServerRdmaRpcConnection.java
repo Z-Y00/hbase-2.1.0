@@ -85,6 +85,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.connectionHeaderRead=false;
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
+    
     this.hostAddress = "10.10.0.112";//tmp fix
     try {
       this.addr=InetAddress.getByName(this.hostAddress);

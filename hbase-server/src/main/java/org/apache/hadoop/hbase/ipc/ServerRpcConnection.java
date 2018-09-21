@@ -652,8 +652,6 @@ abstract class ServerRpcConnection implements Closeable {
       if (header.hasRequestParam() && header.getRequestParam()) {
         if(this.service==null) {
           RpcServer.LOG.warn("RDMA service == null, we will init it here");
-        //TODO get the service here RegionServerStatusService or MasterService or ClientService
-        //https://www.cnblogs.com/superhedantou/p/5840631.html
         this.service = RpcServer.getService(this.rpcServer.services, "ClientService");
       }
         md = this.service.getDescriptorForType().findMethodByName(
@@ -717,7 +715,8 @@ abstract class ServerRpcConnection implements Closeable {
     }
     ServerCall<?> call = createCall(id, this.service, md, header, param, cellScanner, totalRequestSize,
       this.addr, timeout, this.callCleanup);
-
+    //RDMA core bug, here the this.rpcServer
+    RpcServer.LOG.warn("RDMA debug this rpcServer at "+this.rpcServer.bindAddress.toString());
     if (!this.rpcServer.scheduler.dispatch(new CallRunner(this.rpcServer, call))) {
       this.rpcServer.callQueueSizeInBytes.add(-1 * call.getSize());
       this.rpcServer.metrics.exception(RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
