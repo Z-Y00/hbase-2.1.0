@@ -92,13 +92,16 @@ public class CallRunner {
   }
 
   public void run() {//RDMA DEBUG
+    RpcServer.LOG.warn("RDMA debug callrunner run()");
     try {
-      if (call.disconnectSince() >= 0) {
-        if (RpcServer.LOG.isDebugEnabled()) {
-          RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
-        }
-        return;
-      }
+
+      //the rdma call would be just taken as disconnect, so we drop it here for rdma
+       if (call.disconnectSince() >= 0) {
+         if (RpcServer.LOG.isDebugEnabled()) {
+           RpcServer.LOG.debug(Thread.currentThread().getName() + ": skipped " + call);
+         }
+         return;
+       }
       call.setStartTime(System.currentTimeMillis());
       if (call.getStartTime() > call.getDeadline()) {
         RpcServer.LOG.warn("Dropping timed out call: " + call);
@@ -158,7 +161,9 @@ public class CallRunner {
       // Set the response
       Message param = resultPair != null ? resultPair.getFirst() : null;
       CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
+      
       call.setResponse(param, cells, errorThrowable, error);
+      RpcServer.LOG.warn("RDMA debug callrunner setResponse done ");
       call.sendResponseIfReady();
       this.status.markComplete("Sent response");
       this.status.pause("Waiting for a call");

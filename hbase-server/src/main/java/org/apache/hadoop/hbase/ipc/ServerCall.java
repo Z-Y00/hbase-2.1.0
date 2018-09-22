@@ -62,7 +62,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   // Optional cell data passed outside of protobufs.
   protected final CellScanner cellScanner;
   protected final T connection;              // connection to client
-  protected final SimpleServerRdmaRpcConnection rdmaconn;
+  //protected final SimpleServerRdmaRpcConnection rdmaconn;
   protected final long receiveTime;      // the time received when response is null
                                  // the time served when response is not null
   protected final int timeout;
@@ -106,7 +106,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
     this.param = param;
     this.cellScanner = cellScanner;
     this.connection = connection;
-    this.rdmaconn = null;
+    //this.rdmaconn = null;
     this.isRdma= false;
     this.receiveTime = receiveTime;
     this.response = null;
@@ -127,32 +127,6 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
     this.reqCleanup = reqCleanup;
   }
 
-  ServerCall(int id, BlockingService service, MethodDescriptor md, RequestHeader header, Message param,
-      CellScanner cellScanner, SimpleServerRdmaRpcConnection rdmaconn, long size, InetAddress remoteAddress, long receiveTime, int timeout,
-      ByteBufferPool reservoir, CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
-    this.id = id;
-    this.service = service;
-    this.md = md;
-    this.header = header;
-    this.param = param;
-    this.cellScanner = cellScanner;
-    this.connection = null;
-    this.rdmaconn = rdmaconn;
-    this.isRdma= true;
-    this.receiveTime = receiveTime;
-    this.response = null;
-    this.isError = false;
-    this.size = size;
-    this.retryImmediatelySupported = false;
-    this.user = null;//TODO rgy is this right??
-
-    this.remoteAddress = remoteAddress;
-    this.timeout = timeout;
-    this.deadline = this.timeout > 0 ? this.receiveTime + this.timeout : Long.MAX_VALUE;
-    this.reservoir = reservoir;
-    this.cellBlockBuilder = cellBlockBuilder;
-    this.reqCleanup = reqCleanup;
-  }
 
   /**
    * Call is done. Execution happened and we returned results to client. It is
@@ -215,6 +189,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   @Override
   public synchronized void setResponse(Message m, final CellScanner cells,//TODO RGY change the other response in this file
       Throwable t, String errorMsg) {
+        RpcServer.LOG.warn("RDMA debug called  setResponse");
     if (this.isError) return;
     if (t != null) this.isError = true;
     BufferChain bc = null;
@@ -230,24 +205,24 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
       // high when we can avoid a big buffer allocation on each rpc.
       List<ByteBuffer> cellBlock = null;
       int cellBlockSize = 0;
-      if (this.isRdma) {
-        if (this.reservoir != null) {
-          this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.rdmaconn.codec,
-            this.rdmaconn.compressionCodec, cells, this.reservoir);
-          if (this.cellBlockStream != null) {
-            cellBlock = this.cellBlockStream.getByteBuffers();
-            cellBlockSize = this.cellBlockStream.size();
-          }
-        } else {
-          ByteBuffer b = this.cellBlockBuilder.buildCellBlock(this.rdmaconn.codec,
-            this.rdmaconn.compressionCodec, cells);
-          if (b != null) {
-            cellBlockSize = b.remaining();
-            cellBlock = new ArrayList<>(1);
-            cellBlock.add(b);
-          }
-        }
-      } else {
+      // if (this.isRdma) {
+      //   if (this.reservoir != null) {
+      //     this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.rdmaconn.codec,
+      //       this.rdmaconn.compressionCodec, cells, this.reservoir);
+      //     if (this.cellBlockStream != null) {
+      //       cellBlock = this.cellBlockStream.getByteBuffers();
+      //       cellBlockSize = this.cellBlockStream.size();
+      //     }
+      //   } else {
+      //     ByteBuffer b = this.cellBlockBuilder.buildCellBlock(this.rdmaconn.codec,
+      //       this.rdmaconn.compressionCodec, cells);
+      //     if (b != null) {
+      //       cellBlockSize = b.remaining();
+      //       cellBlock = new ArrayList<>(1);
+      //       cellBlock.add(b);
+      //     }
+      //   }
+      // } else {
         if (this.reservoir != null) {
           this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.connection.codec,
             this.connection.compressionCodec, cells, this.reservoir);
@@ -264,7 +239,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
             cellBlock.add(b);
           }
         }
-      }
+      //}
 
 
 
@@ -436,11 +411,8 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   }
 
   @Override
-  public long disconnectSince() {
-    if(!(this.rdmaconn==null)){//TODO !!! RGY add support for this 
-      if((this.rdmaconn.rdmaconn.isClosed())) return -1L;
-      return 0L;
-    }
+  public long disconnectSince() {//force return -1L, to get the rdma debug
+    //TODO !!! RGY add support for this 
     if (!this.connection.isConnectionOpen()) {
       return System.currentTimeMillis() - receiveTime;
     } else {
@@ -560,9 +532,9 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
 
   @Override
   public int getRemotePort() {
-    if(!(this.rdmaconn==null)){
-      return this.rdmaconn.remotePort;
-    }
+    // if(!(this.rdmaconn==null)){
+    //   return this.rdmaconn.remotePort;
+    // }
     return connection.getRemotePort();
   }
 

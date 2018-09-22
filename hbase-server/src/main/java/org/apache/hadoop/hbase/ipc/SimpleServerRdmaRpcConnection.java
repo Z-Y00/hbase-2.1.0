@@ -237,7 +237,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         process();
       }
     }
-    SimpleRpcServer.LOG.warn("RDMA normal buf, no header");
+    SimpleRpcServer.LOG.warn("RDMA readAndProcess done");
 
     return dataLength;//return what we've read if -1, we will close it
   }
@@ -276,6 +276,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     SimpleRpcServer.LOG.warn("RDMA data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
 
     try {
+      SimpleRpcServer.LOG.warn("RDMA processOneRpc");
         processOneRpc(data);
     } finally {
       dataLengthBuffer.clear(); // Clean for the next call
@@ -299,15 +300,17 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
   @Override
   public boolean isConnectionOpen() {
-    return !(rdmaconn.isClosed());
+    SimpleRpcServer.LOG.warn("RDMA isConnectionOpen get result "+!(rdmaconn.isClosed()));
+    return true;
+    //return !(rdmaconn.isClosed());
   }
 
   @Override
-  public SimpleServerCall createCall(int id, BlockingService service, MethodDescriptor md,
+  public SimpleRdmaServerCall createCall(int id, BlockingService service, MethodDescriptor md,
       RequestHeader header, Message param, CellScanner cellScanner, long size,
       InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
         SimpleRpcServer.LOG.warn("RDMA createCall");
-    return new SimpleServerCall(id, service, md, header, param, cellScanner, this, size,
+    return new SimpleRdmaServerCall(id, service, md, header, param, cellScanner, this, size,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
         this.rpcServer.cellBlockBuilder, reqCleanup, this.rdmaresponder);
   }
@@ -322,18 +325,16 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     boolean error = true;
     BufferChain buf = resp.getResponse();
     try {
-      // Send as much data as we can in the non-blocking fashion
 
-      
       ByteBuffer sbuf = buf.concat();
-      //rdma.rdmaRespond(conn.qp, sbuf);
-      if(conn.rdmaconn.writeResponse(sbuf)) 
-      error = true;
-      SimpleRpcServer.LOG.warn("RDMA processResponse");
+      if(!conn.rdmaconn.writeResponse(sbuf)) 
+      {error = true;
+      SimpleRpcServer.LOG.warn("RDMA processResponse failed");}
       error = false;
+      SimpleRpcServer.LOG.warn("RDMA processResponse done");
     } finally {
       if (error) {
-        SimpleRpcServer.LOG.debug(conn + ": output error -- closing");
+        SimpleRpcServer.LOG.debug(conn + ": RDMA failed -- closing");
         resp.done();
         SimpleRpcServer.closeRdmaConnection(conn);
       }

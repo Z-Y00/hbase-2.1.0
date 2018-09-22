@@ -34,22 +34,23 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
  * result.
  */
 @InterfaceAudience.Private
-class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
+class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
 
-  final SimpleRpcServerResponder responder;
-
+  //final SimpleRpcServerRdmaResponder rdmaresponder;
 
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
       justification = "Can't figure why this complaint is happening... see below")
 
-  SimpleServerCall(int id, final BlockingService service, final MethodDescriptor md,
-      RequestHeader header, Message param, CellScanner cellScanner,
-      SimpleServerRpcConnection connection, long size,
+
+  SimpleRdmaServerCall(int id, final BlockingService service, final MethodDescriptor md, 
+      RequestHeader header, Message param, CellScanner cellScanner, 
+      SimpleServerRdmaRpcConnection rdmaconnection, long size,
       final InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
-      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerResponder responder) {
-    super(id, service, md, header, param, cellScanner, connection, size, remoteAddress,
-        receiveTime, timeout, reservoir, cellBlockBuilder, reqCleanup);
-    this.responder = responder;
+      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerRdmaResponder rdmaresponder) {
+    super(id, service, md, header, param, cellScanner, rdmaconnection, size, remoteAddress, receiveTime, timeout,
+        reservoir, cellBlockBuilder, reqCleanup);
+    SimpleRpcServer.LOG.warn("RDMA: SimpleRdmaServerCall");
+    //this.rdmaresponder = rdmaresponder;
 
   }
 
@@ -67,12 +68,14 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
   @Override///TODO rgy add rdma supplicant of this fun
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
+    //SimpleRpcServer.LOG.warn("RDMA ？ sendResponseIfReady");
     this.param = null;
-      this.responder.doRespond(getConnection(), this);
+      SimpleRpcServer.LOG.warn("RDMA: sendResponseIfReady");
+      SimpleServerRdmaRpcConnection.processResponse(this.connection,this);//TODO change to rdmahandler
 
   }
 
-  SimpleServerRpcConnection getConnection() {
+  SimpleServerRdmaRpcConnection getConnection() {
     return this.connection;
   }
 }

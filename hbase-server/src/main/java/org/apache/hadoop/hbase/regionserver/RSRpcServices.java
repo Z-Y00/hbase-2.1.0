@@ -3061,6 +3061,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
     } else {
       maxResultSize = maxQuotaResultSize;
     }
+    //LOG.warn("RDMA scan test 1!");
     // This is cells inside a row. Default size is 10 so if many versions or many cfs,
     // then we'll resize. Resizings show in profiler. Set it higher than 10. For now
     // arbitrary 32. TODO: keep record of general size of results being returned.
@@ -3076,7 +3077,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
             request.hasClientHandlesPartials() && request.getClientHandlesPartials();
         boolean clientHandlesHeartbeats =
             request.hasClientHandlesHeartbeats() && request.getClientHandlesHeartbeats();
-
+            //LOG.warn("RDMA scan test 2!");
         // On the server side we must ensure that the correct ordering of partial results is
         // returned to the client to allow them to properly reconstruct the partial results.
         // If the coprocessor host is adding to the result list, we cannot guarantee the
@@ -3096,7 +3097,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         boolean allowHeartbeatMessages = clientHandlesHeartbeats && allowPartialResults;
 
         long timeLimit = getTimeLimit(controller, allowHeartbeatMessages);
-
+        
         final LimitScope sizeScope =
             allowPartialResults ? LimitScope.BETWEEN_CELLS : LimitScope.BETWEEN_ROWS;
         final LimitScope timeScope =
@@ -3122,10 +3123,10 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
           // reset the batch progress between nextRaw invocations since we don't want the
           // batch progress from previous calls to affect future calls
           scannerContext.setBatchProgress(0);
-
+          LOG.warn("RDMA scan test 3!");
           // Collect values to be returned here
           moreRows = scanner.nextRaw(values, scannerContext);
-
+          
           if (!values.isEmpty()) {
             if (limitOfRows > 0) {
               // First we need to check if the last result is partial and we have a row change. If
@@ -3146,6 +3147,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
                     builder);
                 }
               }
+              
               if (builder.hasMoreResults() && !builder.getMoreResults()) {
                 break;
               }
@@ -3370,7 +3372,7 @@ public class RSRpcServices implements HBaseRPCErrorHandler,
         // This is a open scanner call with numberOfRow = 0, so set more results in region to true.
         builder.setMoreResultsInRegion(true);
       }
-
+      
       quota.addScanResult(results);
       addResults(builder, results, (HBaseRpcController) controller,
         RegionReplicaUtil.isDefaultReplica(region.getRegionInfo()),

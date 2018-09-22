@@ -356,9 +356,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
     }
     while (waitForWork()) {
-
-
-      
+    
       readResponse();
       
     }
@@ -541,7 +539,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
     LOG.warn("RDMA rdmaConnect L538 with addr and port "+this.rdmaPort);
     
-    do this.rdmaconn=rdma.rdmaConnect("11.11.0.111",this.rdmaPort);
+    do this.rdmaconn=rdma.rdmaConnect("10.10.0.112",this.rdmaPort);
     while (this.rdmaconn==null);  
     this.rdma_out_stream = new ByteArrayOutputStream();
     this.rdma_out = new DataOutputStream(this.rdma_out_stream);
@@ -677,9 +675,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        
-      if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Scan"))))//debug
+      if ((!useSasl) && (remoteId.getAddress().getPort()==16020)&&(callMd.equals("Scan")))//this go to the regionserver
       //for these belongs to one regionserver, so we get it to that same conn
-      //if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Get") || (callMd.equals("Multi")) || (callMd.equals("Scan")))))
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
         writeRdmaRequest(call);}
@@ -731,7 +728,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     notifyAll();
   }
   private void writeRdmaRequest(Call call) throws IOException {
-    LOG.warn("RDMA writeRdmaRequest");
+    LOG.warn("RDMA writeRdmaRequest hooked what should go to "+remoteId.getAddress());
     ByteBuffer cellBlock = this.rpcClient.cellBlockBuilder.buildCellBlock(this.codec,
       this.compressor, call.cells);
     CellBlockMeta cellBlockMeta;
@@ -909,7 +906,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.setException(re);
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
-            .setCallTimeMs(1000L);
+        .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
         if (isFatalConnectionException(exceptionResponse)) {
           synchronized (this) {
             closeConn(re);
@@ -936,7 +933,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.setResponse(value, cellBlockScanner);
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
-            .setCallTimeMs(1000L);//TODO change back! this is call time out, not rdma time out
+        .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
       }
       LOG.warn("RDMA  readRdmaResponse! done");
     } catch (IOException e) {

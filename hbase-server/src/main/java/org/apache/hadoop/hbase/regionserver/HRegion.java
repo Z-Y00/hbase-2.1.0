@@ -6364,10 +6364,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     public boolean nextRaw(List<Cell> outResults, ScannerContext scannerContext)
         throws IOException {
       if (storeHeap == null) {
+
         // scanner is closed
         throw new UnknownScannerException("Scanner was closed");
       }
       boolean moreValues = false;
+      LOG.warn("RDMA scan test 4!");
       if (outResults.isEmpty()) {
         // Usually outResults is empty. This is true when next is called
         // to handle scan or get operation.
@@ -6377,7 +6379,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         moreValues = nextInternal(tmpList, scannerContext);
         outResults.addAll(tmpList);
       }
-
+      LOG.warn("RDMA scan test 5!");
       if (!outResults.isEmpty()) {
         readRequestsCount.increment();
       }
@@ -6388,7 +6390,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       if (!scannerContext.mayHaveMoreCellsInRow()) {
         resetFilters();
       }
-
+      LOG.warn("RDMA scan test 6!");
       if (isFilterDoneInternal()) {
         moreValues = false;
       }
