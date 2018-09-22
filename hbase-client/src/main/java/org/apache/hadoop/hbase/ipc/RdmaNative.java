@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 
 public class RdmaNative {
     static {
-        System.err.println("Loading library and initing...");
+        System.err.println("Client Loading library and initing...");
         System.loadLibrary("RdmaNative");
         RdmaNative.rdmaInitGlobal();
         // The kernel will cleanup all resources on exit. Use finalize() for another class in the future.

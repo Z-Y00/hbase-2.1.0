@@ -456,9 +456,9 @@ abstract class ServerRpcConnection implements Closeable {
         byte[] arr = new byte[buf.remaining()];
         buf.get(arr);
         buf.rewind();
-    SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content and length"
-     +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString()+" length "+
-     rbuflength);
+    // SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content and length"
+    //  +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString()+" length "+
+    //  rbuflength);
 
     if (connectionHeaderRead) {
       SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");

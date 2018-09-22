@@ -83,10 +83,10 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
 public class SimpleRpcServer extends RpcServer {
-  private static RdmaNative rdma = new RdmaNative();
-  static {
-    rdma.rdmaBind(2333);
-  }
+  private  RdmaNative rdma =null;
+  // static {
+  //   rdma.rdmaBind(2333);
+  // }
       //TODO isRdma get from conf
       
 
@@ -391,9 +391,13 @@ public class SimpleRpcServer extends RpcServer {
           conf.getInt("hbase.ipc.server.read.connection-queue.size", 100);
       // Create a new server socket and set to non blocking mode
 
-      if(port==16000){//drop for master
+      if(port==16000){//drop for hmaster
         return;
       }
+      LOG.warn("Server Loading the rdmalib");
+      rdma= new RdmaNative();
+      LOG.warn("Server bind! the rdmalib");
+      rdma.rdmaBind(2333);
 
       readers = new Reader[readThreads];
       // Why this executor thing? Why not like hadoop just start up all the threads? I suppose it
@@ -408,11 +412,11 @@ public class SimpleRpcServer extends RpcServer {
         readers[i] = reader;
         readPool.execute(reader);
       }
-      LOG.info(getName() + ": started " + readThreads + " reader(s) listening on port=" + port);
+      LOG.info("rdmaListener: started " + readThreads + " reader(s) listening on port=" + 2333);
 
       // Register accepts on the server socket with the selector.
       //acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
-      this.setName("RdmaListener,port=" + port);
+      this.setName("RdmaListener,port=" + 2333);
       this.setDaemon(true);
     }
 

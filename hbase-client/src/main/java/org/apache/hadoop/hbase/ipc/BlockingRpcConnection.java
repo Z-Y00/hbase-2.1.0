@@ -672,9 +672,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
           call.span)) {
 
-      LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
-      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
-      +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
+      // LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
+      // StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
+      // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        
       if ((!useSasl)&&(this.isRdma) && ((callMd.equals("Scan"))))//debug
