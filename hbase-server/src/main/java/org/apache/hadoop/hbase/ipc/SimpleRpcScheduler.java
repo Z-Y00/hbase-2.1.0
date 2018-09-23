@@ -159,15 +159,15 @@ public class SimpleRpcScheduler extends RpcScheduler implements ConfigurationObs
     if (level == HConstants.PRIORITY_UNSET) {
       level = HConstants.NORMAL_QOS;
     }
-    RpcServer.LOG.debug("get it to diapatch");
+    //RpcServer.LOG.debug("get it to diapatch");
     if (priorityExecutor != null && level > highPriorityLevel) {
-      RpcServer.LOG.debug("get it into priorityExecutor");
+      //RpcServer.LOG.debug("get it into priorityExecutor");
       return priorityExecutor.dispatch(callTask);
     } else if (replicationExecutor != null && level == HConstants.REPLICATION_QOS) {
-      RpcServer.LOG.debug("get it into replicationExecutor");
+      //RpcServer.LOG.debug("get it into replicationExecutor");
       return replicationExecutor.dispatch(callTask);
     } else {
-      RpcServer.LOG.debug("get it into callExecutor");
+      //RpcServer.LOG.debug("get it into callExecutor");
       return callExecutor.dispatch(callTask);
     }
   }

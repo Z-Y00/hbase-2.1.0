@@ -312,7 +312,6 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       if (useSasl) {
         saslReadAndProcess(data);
       } else {
-        SimpleRpcServer.LOG.warn("normal processOneRpc");
         processOneRpc(data);
       }
 

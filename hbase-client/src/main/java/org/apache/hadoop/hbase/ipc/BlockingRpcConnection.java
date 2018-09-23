@@ -88,7 +88,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
 @InterfaceAudience.Private
 class BlockingRpcConnection extends RpcConnection implements Runnable {
 
-  public boolean isRdma=true;
+  //public boolean isRdma=true;
   private static final Logger LOG = LoggerFactory.getLogger(BlockingRpcConnection.class);
 
   private final BlockingRpcClient rpcClient;
@@ -531,12 +531,12 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     thread.start();
   }
   private void setupRdmaIOstreams() throws IOException {
-    if(this.rdma_out!=null){//this is already set
-      LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
-      //this.rdma_out.close();
-      this.rdma_out_stream.reset();//clear the underlying one.
-      return ;
-    }
+    // if(this.rdma_out!=null){//this is already set
+    //   LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
+    //   //this.rdma_out.close();
+    //   this.rdma_out_stream.reset();//clear the underlying one.
+    //   return ;
+    // }
     LOG.warn("RDMA rdmaConnect L538 with addr and port "+this.rdmaPort);
     
     do this.rdmaconn=rdma.rdmaConnect("10.10.0.112",this.rdmaPort);
@@ -556,24 +556,11 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       if (LOG.isDebugEnabled()) {
         LOG.debug("Connecting to " + remoteId.address);
       }
-        // Write out the preamble -- MAGIC, version, and auth to use.
-        //rdma_out.write(connectionHeaderPreamble);//to preambleBuffer connectionPreambleRead
+
         // Now write out the connection header//
         // this will init the servie and usr ugi
       rdma_out.write(connectionHeaderWithLength);// essential connectionHeaderRead
       
-
-      //send it in one !!!
-      // // send the header first
-      // byte[] sbuf = this.rdma_out_stream.toByteArray();
-      // LOG.warn("RDMA setupRdmaIOstreams with length and content " + rdma_out_stream.size()+" "+
-      // StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
-      // // allocate direct buf
-      // ByteBuffer directbuf = ByteBuffer.allocateDirect(sbuf.length);
-      // ByteBuffer tmp = ByteBuffer.wrap(sbuf);
-      // directbuf.put(tmp);
-      // if (!rdmaconn.writeQuery(directbuf))
-      // LOG.warn("RDMA writeQuery failed");
 
 
 
@@ -679,8 +666,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       //for these belongs to one regionserver, so we get it to that same conn
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
-        writeRdmaRequest(call);}
-        //writeRequest(call);}//debugging
+        //writeRdmaRequest(call);}
+        writeRequest(call);}//debugging
       else
       {LOG.warn("RDMA get a normal call with callMd "+ callMd);
         writeRequest(call);}

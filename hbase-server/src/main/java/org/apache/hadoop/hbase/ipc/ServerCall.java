@@ -189,7 +189,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   @Override
   public synchronized void setResponse(Message m, final CellScanner cells,//TODO RGY change the other response in this file
       Throwable t, String errorMsg) {
-        RpcServer.LOG.warn("RDMA debug called  setResponse");
+        //RpcServer.LOG.warn("RDMA debug called  setResponse");
     if (this.isError) return;
     if (t != null) this.isError = true;
     BufferChain bc = null;

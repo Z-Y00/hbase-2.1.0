@@ -452,19 +452,19 @@ abstract class ServerRpcConnection implements Closeable {
 
   public void processOneRpc(ByteBuff buf) throws IOException,
       InterruptedException {
-        int rbuflength = buf.remaining();
-        byte[] arr = new byte[buf.remaining()];
-        buf.get(arr);
+        // int rbuflength = buf.remaining();
+        // byte[] arr = new byte[buf.remaining()];
+        // buf.get(arr);
         buf.rewind();
-     SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content and length"
-      +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString()+" length "+
-      rbuflength);
+    //  SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc  content and length"
+    //   +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString()+" length "+
+    //   rbuflength);
 
     if (connectionHeaderRead) {
-      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");
+      //SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");
       processRequest(buf);
     } else {
-      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processConnectionHeader");
+      //SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processConnectionHeader");
       processConnectionHeader(buf);
       this.connectionHeaderRead = true;
       if (!authorizeConnection()) {
@@ -513,7 +513,7 @@ abstract class ServerRpcConnection implements Closeable {
     String serviceName = connectionHeader.getServiceName();
     if (serviceName == null) throw new EmptyServiceNameException();
     this.service = RpcServer.getService(this.rpcServer.services, serviceName);
-    RpcServer.LOG.warn("RDMA debug get the service "+serviceName);
+    //RpcServer.LOG.warn("RDMA debug get the service "+serviceName);
     if (this.service == null) throw new UnknownServiceException(serviceName);
     setupCellBlockCodecs(this.connectionHeader);
     RPCProtos.ConnectionHeaderResponse.Builder chrBuilder =
@@ -716,14 +716,14 @@ abstract class ServerRpcConnection implements Closeable {
     ServerCall<?> call = createCall(id, this.service, md, header, param, cellScanner, totalRequestSize,
       this.addr, timeout, this.callCleanup);
     //RDMA core bug, here the this.rpcServer
-    RpcServer.LOG.warn("RDMA debug this rpcServer at "+this.rpcServer.bindAddress.toString());
+    //RpcServer.LOG.warn("RDMA debug this rpcServer at "+this.rpcServer.bindAddress.toString());
     if (!this.rpcServer.scheduler.dispatch(new CallRunner(this.rpcServer, call))) {
       this.rpcServer.callQueueSizeInBytes.add(-1 * call.getSize());
       this.rpcServer.metrics.exception(RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION);
       call.setResponse(null, null, RpcServer.CALL_QUEUE_TOO_BIG_EXCEPTION,
         "Call queue is full on " + this.rpcServer.server.getServerName() +
             ", too many items queued ?");
-      RpcServer.LOG.warn("RDMA debug failed at dispatch ");
+     // RpcServer.LOG.warn("RDMA debug failed at dispatch ");
       call.sendResponseIfReady();
     }
   }

@@ -86,7 +86,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
     
-    this.hostAddress = "10.10.0.112";//tmp fix
+    this.hostAddress = "10.10.0.111";//tmp fix
     try {
       this.addr=InetAddress.getByName(this.hostAddress);
     } catch (Exception e) {
@@ -94,10 +94,9 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     }
     this.remotePort = port;
     this.rdmaresponder = rpcServer.rdmaresponder;
-    SimpleRpcServer.LOG.warn("RDMA init rdmaconn L98 simpleserverRdmaconn.java");
     do this.rdmaconn = rdma.rdmaBlockedAccept();
          while (this.rdmaconn==null);  
-    SimpleRpcServer.LOG.warn("RDMA init done!");// ??? null pointer?
+    SimpleRpcServer.LOG.warn("RDMA rdmaBlockedAccept done!");// ??? null pointer?
   }
 
   public void setLastContact(long lastContact) {
@@ -300,7 +299,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
   @Override
   public boolean isConnectionOpen() {
-    SimpleRpcServer.LOG.warn("RDMA isConnectionOpen get result "+!(rdmaconn.isClosed()));
+    //SimpleRpcServer.LOG.warn("RDMA isConnectionOpen get result "+!(rdmaconn.isClosed()));
     return true;
     //return !(rdmaconn.isClosed());
   }

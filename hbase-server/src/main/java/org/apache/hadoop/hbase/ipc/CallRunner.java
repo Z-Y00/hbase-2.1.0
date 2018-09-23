@@ -92,7 +92,7 @@ public class CallRunner {
   }
 
   public void run() {//RDMA DEBUG
-    RpcServer.LOG.warn("RDMA debug callrunner run()");
+    //RpcServer.LOG.warn("RDMA debug callrunner run()");
     try {
 
       //the rdma call would be just taken as disconnect, so we drop it here for rdma
@@ -163,7 +163,7 @@ public class CallRunner {
       CellScanner cells = resultPair != null ? resultPair.getSecond() : null;
       
       call.setResponse(param, cells, errorThrowable, error);
-      RpcServer.LOG.warn("RDMA debug callrunner setResponse done ");
+      //RpcServer.LOG.warn("RDMA debug callrunner setResponse done ");
       call.sendResponseIfReady();
       this.status.markComplete("Sent response");
       this.status.pause("Waiting for a call");
