@@ -34,6 +34,33 @@ public class RdmaNative {
             public native boolean writeQuery(ByteBuffer data); // blocked until success.
             public native boolean close(); // You may call it automatically in destructor. It MUST be called once.
         }
+
+        public class RdmaMuxedClientConnection {
+            public String addr;
+            public int port;
+            private RdmaClientConnection rcc;
+            public RdmaMuxedClientConnection(String iaddr, int iport) {
+                addr = iaddr;
+                port = iport;
+                rcc = rdmaConnect(addr, port);
+            }
+            public boolean isClosed() {
+                return rcc.isClosed();
+            }
+            public ByteBuffer readResponse() {
+                return rcc.readResponse();
+            }
+            public boolean writeQuery(ByteBuffer data){
+                return rcc.writeQuery(data);
+            }
+            public boolean close() {
+                return rcc.close();
+            }
+        }
+
+        public RdmaMuxedClientConnection muxedConnect(String addr, int port){
+            return new RdmaMuxedClientConnection(addr, port);
+        }
     
         public class RdmaServerConnection {
             /* 
