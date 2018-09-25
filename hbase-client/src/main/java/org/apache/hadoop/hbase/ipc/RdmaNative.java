@@ -26,7 +26,13 @@ public class RdmaNative {
     
         public class RdmaClientConnection {
             private long ptrCxxClass;
-    
+            private boolean ifInit = false;
+            public void init(){
+                this.ifInit= true;
+            }
+            public boolean ifInit(){
+                return this.ifInit;
+            }
             public native boolean isClosed();
             // returned ByteBuffer MAY be invalidated on next readResponse(). (invalidated if the bytebuffer is created without copying data)
             // return null object if the read failed.
@@ -39,6 +45,7 @@ public class RdmaNative {
             public String addr;
             public int port;
             private RdmaClientConnection rcc;
+            
             public RdmaMuxedClientConnection(String iaddr, int iport) {
                 addr = iaddr;
                 port = iport;
@@ -46,6 +53,12 @@ public class RdmaNative {
             }
             public boolean isClosed() {
                 return rcc.isClosed();
+            }
+            public void init(){
+                rcc.init();
+            }
+            public boolean ifInit(){
+                return rcc.ifInit;
             }
             public ByteBuffer readResponse() {
                 return rcc.readResponse();

@@ -26,6 +26,13 @@ public class RdmaNative {
     
         public class RdmaClientConnection {
             private long ptrCxxClass;
+            private boolean ifInit = false;
+            public void init(){
+                this.ifInit= true;
+            }
+            public boolean ifInit(){
+                return this.ifInit;
+            }
     
             public native boolean isClosed();
             // returned ByteBuffer MAY be invalidated on next readResponse(). (invalidated if the bytebuffer is created without copying data)

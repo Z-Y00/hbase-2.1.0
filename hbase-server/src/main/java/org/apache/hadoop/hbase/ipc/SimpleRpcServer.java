@@ -441,6 +441,7 @@ public class SimpleRpcServer extends RpcServer {
 
             Iterator<SimpleServerRdmaRpcConnection> iter = pendingConnections.iterator();
             while (iter.hasNext()) {
+              LOG.warn("RDMA reader running");
               SimpleServerRdmaRpcConnection  rdma_conn= iter.next();
                 if (rdma_conn.isReadable()) {
                   doRead(rdma_conn);

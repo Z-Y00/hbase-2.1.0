@@ -106,7 +106,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private ByteArrayOutputStream rdma_out_stream = null;
   private static RdmaNative rdma = new RdmaNative();
   private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
-  private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
+  //private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
+   private RdmaNative.RdmaClientConnection rdmaconn;
 
   public final int rdmaPort;
   private HBaseSaslRpcClient saslRpcClient;
@@ -522,7 +523,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         } else {
           e = new IOException("Could not set up IO Streams to " + remoteId.address, t);
         }
-      }
+      }    
       throw e;
     }
 
@@ -532,20 +533,25 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     thread.start();
   }
   private void setupRdmaIOstreams() throws IOException {
-    // if(this.rdma_out!=null){//this is already set
-    //   LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
-    //   //this.rdma_out.close();
-    //   this.rdma_out_stream.reset();//clear the underlying one.
-    //   return ;
-    // }
+
+     if(this.rdmaconn!=null){
+     if(this.rdmaconn.ifInit()){//this is already set
+       LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
+       //this.rdma_out.close();
+       this.rdma_out_stream.reset();//clear the underlying one.
+       return ;
+     }
+     LOG.warn("get a rdmaconn, not inited!!!");
+    }
     LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
-    try {
-      do this.rdmaconn=rdmaPool.acquire("10.10.0.112",this.rdmaPort);
+    //try {
+      //do this.rdmaconn=rdmaPool.acquire("10.10.0.112",this.rdmaPort);
+      do this.rdmaconn=rdma.rdmaConnect("10.10.0.112",this.rdmaPort);
       while (this.rdmaconn==null);  
       
-    } catch (RdmaConnectionPool.RdmaConnectException e) {
-      LOG.warn("RDMA acquire failed "+e.toString());
-    }
+    //} catch (RdmaConnectionPool.RdmaConnectException e) {
+     // LOG.warn("RDMA pool acquire failed "+e.toString());
+   // }
 
 
     this.rdma_out_stream = new ByteArrayOutputStream();
@@ -567,7 +573,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         // Now write out the connection header//
         // this will init the servie and usr ugi
       rdma_out.write(connectionHeaderWithLength);// essential connectionHeaderRead
-      
+      this.rdmaconn.init();
 
 
 

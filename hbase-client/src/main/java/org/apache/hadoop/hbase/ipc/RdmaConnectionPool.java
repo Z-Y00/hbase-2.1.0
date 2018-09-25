@@ -8,6 +8,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Public
 public class RdmaConnectionPool {
     private RdmaNative rn;
+    
     public RdmaConnectionPool(RdmaNative rni) {
         rn = rni;
         pool = new HashMap<>();
