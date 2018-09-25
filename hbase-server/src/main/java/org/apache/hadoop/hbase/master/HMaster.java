@@ -835,7 +835,6 @@ public class HMaster extends HRegionServer implements MasterServices {
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.setDaemon(true);
     zombieDetector.start();
-    LOG.warn("RDMA debug init hmaster 3");
     /*
      * We are active master now... go initialize components we need to run.
      */
@@ -850,7 +849,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // enable table descriptors cache
     this.tableDescriptors.setCacheOn();
-    LOG.warn("RDMA debug init hmaster 3.1");
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
       status.setStatus("Pre-loading table descriptors");
@@ -866,7 +864,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.clusterId = clusterId.toString();
 
 
-    LOG.warn("RDMA debug init hmaster 3.2");
     status.setStatus("Initialze ServerManager and schedule SCP for crash servers");
     this.serverManager = createServerManager(this);
     createProcedureExecutor();
@@ -906,7 +903,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     // initialize master side coprocessors before we start handling requests
     status.setStatus("Initializing master coprocessors");
     this.cpHost = new MasterCoprocessorHost(this, this.conf);
-    LOG.warn("RDMA debug init hmaster 3.3");
     status.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
     if (assignmentManager.getRegionStates().getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO)
@@ -929,7 +925,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.balancer.setMasterServices(this);
     this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
     this.balancer.initialize();
-    LOG.warn("RDMA debug init hmaster 3.4");
     // start up all service threads.
     status.setStatus("Initializing master service threads");
     startServiceThreads();
@@ -940,7 +935,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     tableStateManager.start();
     // Wake up this server to check in
     sleeper.skipSleepCycle();
-    LOG.warn("RDMA debug init hmaster 943");
+    LOG.warn("RDMA debug init hmaster 938");
     // Wait for region servers to report in.
     // With this as part of master initialization, it precludes our being able to start a single
     // server that is both Master and RegionServer. Needs more thought. TODO.
@@ -965,7 +960,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
     this.assignmentManager.joinCluster();
-
+    LOG.warn("RDMA debug init hmaster 963");
     // set cluster status again after user regions are assigned
     this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
@@ -979,7 +974,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(normalizerChore);
     this.catalogJanitorChore = new CatalogJanitor(this);
     getChoreService().scheduleChore(catalogJanitorChore);
-
+    LOG.warn("RDMA debug init hmaster 977");
     status.setStatus("Starting cluster schema service");
     initClusterSchemaService();
     if (this.cpHost != null) {
@@ -1029,7 +1024,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     status.setStatus("Initializing MOB Cleaner");
     initMobCleaner();
-
+    LOG.warn("RDMA debug init hmaster 3.4");
     status.setStatus("Calling postStartMaster coprocessors");
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
@@ -1814,7 +1809,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       final byte [][] splitKeys,
       final long nonceGroup,
       final long nonce) throws IOException {
-        LOG.warn("RDMA debug, just think it is initialized");
+        LOG.warn("RDMA debug, if initialized");
     checkInitialized();
 
     String namespace = tableDescriptor.getTableName().getNamespaceAsString();
