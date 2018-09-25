@@ -461,10 +461,10 @@ abstract class ServerRpcConnection implements Closeable {
     //   rbuflength);
 
     if (connectionHeaderRead) {
-      //SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");
+      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");
       processRequest(buf);
     } else {
-      //SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processConnectionHeader");
+      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processConnectionHeader");
       processConnectionHeader(buf);
       this.connectionHeaderRead = true;
       if (!authorizeConnection()) {
