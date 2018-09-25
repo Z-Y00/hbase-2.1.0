@@ -6,8 +6,9 @@ import java.util.HashMap;
 
 public class RdmaConnectionPool {
     private RdmaNative rn;
-    public RdmaConnectionPool(RdmaNative rni){
+    public RdmaConnectionPool(RdmaNative rni) {
         rn = rni;
+        pool = new HashMap<>();
     }
     private HashMap<Pair<String, Integer>, Pair<RdmaNative.RdmaMuxedClientConnection, Integer>> pool;
     // Acquire a connection to addr:port
