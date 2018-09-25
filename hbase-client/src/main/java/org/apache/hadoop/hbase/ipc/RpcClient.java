@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.security.User;
  */
 @InterfaceAudience.Private
 public interface RpcClient extends Closeable {
+
   String FAILED_SERVER_EXPIRY_KEY = "hbase.ipc.client.failed.servers.expiry";
   int FAILED_SERVER_EXPIRY_DEFAULT = 2000;
   String IDLE_TIME = "hbase.ipc.client.connection.minIdleTimeBeforeClose";
@@ -70,6 +71,8 @@ public interface RpcClient extends Closeable {
   BlockingRpcChannel createBlockingRpcChannel(ServerName sn, User user, int rpcTimeout)
       throws IOException;
 
+      void setRdma();
+      void unsetRdma();
   /**
    * Creates a "channel" that can be used by a protobuf service.  Useful setting up
    * protobuf stubs.

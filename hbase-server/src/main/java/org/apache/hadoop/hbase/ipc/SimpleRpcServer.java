@@ -188,7 +188,7 @@ public class SimpleRpcServer extends RpcServer {
             }
             readSelector.select();
             Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
-            LOG.warn("normal reader running");
+            //LOG.warn("normal reader running");
             while (iter.hasNext()) {
               SelectionKey key = iter.next();
               iter.remove();
@@ -444,7 +444,7 @@ public class SimpleRpcServer extends RpcServer {
 
             Iterator<SimpleServerRdmaRpcConnection> iter = pendingConnections.iterator();
             while (iter.hasNext()) {
-              LOG.warn("RDMA reader running");
+              //LOG.warn("RDMA reader running");
               SimpleServerRdmaRpcConnection  rdma_conn= iter.next();
                 if (rdma_conn.isReadable()) {
                   doRead(rdma_conn);

@@ -781,7 +781,8 @@ public class HRegionServer extends HasThread implements
     // Create a cluster connection that when appropriate, can short-circuit and go directly to the
     // local server if the request is to the local server bypassing RPC. Can be used for both local
     // and remote invocations.
-    return ConnectionUtils.createShortCircuitConnection(conf, null, userProvider.getCurrent(),
+    //false is not rdma
+    return ConnectionUtils.createShortCircuitConnection(false,conf, null, userProvider.getCurrent(),
       serverName, rpcServices, rpcServices);
   }
 
@@ -826,9 +827,10 @@ public class HRegionServer extends HasThread implements
     try {
       initializeZooKeeper();
       setupClusterConnection();
-      // Setup RPC client for master communication
-      this.rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
+      // Setup RPC client for master communication  //send the isRdma boolean
+      this.rpcClient = RpcClientFactory.createClient(true,conf, clusterId, new InetSocketAddress(
           this.rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics());
+      rpcClient.setRdma();
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.

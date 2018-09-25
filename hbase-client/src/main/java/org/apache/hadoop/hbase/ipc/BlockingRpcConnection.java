@@ -675,11 +675,12 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        
-      if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
-      ((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
+      if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&this.rpcClient.isRdma&&
+      //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
+      ((callMd.equals("Scan"))))
       //for these belongs to one regionserver, so we get it to that same conn
         {
-          LOG.warn("RDMA get a call with callMd "+ callMd);
+          LOG.warn("RDMA get a call with callMd and threadname"+ callMd);
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
       else

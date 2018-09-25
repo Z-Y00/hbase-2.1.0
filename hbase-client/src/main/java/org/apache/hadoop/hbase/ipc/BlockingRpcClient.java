@@ -39,7 +39,7 @@ import org.apache.hadoop.net.NetUtils;
 public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> {
 
   protected final SocketFactory socketFactory; // how to create sockets
-
+  boolean  isRdma = true;
   /**
    * Used in test only. Construct an IPC client for the cluster {@code clusterId} with the default
    * SocketFactory
@@ -75,4 +75,13 @@ public class BlockingRpcClient extends AbstractRpcClient<BlockingRpcConnection> 
   @Override
   protected void closeInternal() {
   }
+  
+  @Override
+  public void setRdma(){
+    this.isRdma=true;
+    }
+    @Override
+    public void unsetRdma(){
+      this.isRdma=false;
+      }
 }
