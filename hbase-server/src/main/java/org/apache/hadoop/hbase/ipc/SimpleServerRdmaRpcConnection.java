@@ -166,11 +166,11 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   }
 
   private int read4Bytes() throws IOException {
-    if (this.dataLengthBuffer.remaining() > 0) {
+    //if (this.dataLengthBuffer.remaining() > 0) {
       return bufcopy(rbuf, this.dataLengthBuffer);
-    } else {
-      return 0;
-    }
+    //} else {
+    //  return 0;
+    //}
   }
 
   /**

@@ -835,7 +835,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         "ActiveMasterInitializationMonitor-" + System.currentTimeMillis());
     zombieDetector.setDaemon(true);
     zombieDetector.start();
-
+    LOG.warn("RDMA debug init hmaster 3");
     /*
      * We are active master now... go initialize components we need to run.
      */
@@ -850,7 +850,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     // enable table descriptors cache
     this.tableDescriptors.setCacheOn();
-
+    LOG.warn("RDMA debug init hmaster 3.1");
     // warm-up HTDs cache on master initialization
     if (preLoadTableDescriptors) {
       status.setStatus("Pre-loading table descriptors");
@@ -866,7 +866,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.clusterId = clusterId.toString();
 
 
-
+    LOG.warn("RDMA debug init hmaster 3.2");
     status.setStatus("Initialze ServerManager and schedule SCP for crash servers");
     this.serverManager = createServerManager(this);
     createProcedureExecutor();
@@ -906,7 +906,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     // initialize master side coprocessors before we start handling requests
     status.setStatus("Initializing master coprocessors");
     this.cpHost = new MasterCoprocessorHost(this, this.conf);
-
+    LOG.warn("RDMA debug init hmaster 3.3");
     status.setStatus("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
     if (assignmentManager.getRegionStates().getRegionState(RegionInfoBuilder.FIRST_META_REGIONINFO)
@@ -929,7 +929,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     this.balancer.setMasterServices(this);
     this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
     this.balancer.initialize();
-
+    LOG.warn("RDMA debug init hmaster 3.4");
     // start up all service threads.
     status.setStatus("Initializing master service threads");
     startServiceThreads();
@@ -940,7 +940,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     tableStateManager.start();
     // Wake up this server to check in
     sleeper.skipSleepCycle();
-
+    LOG.warn("RDMA debug init hmaster 943");
     // Wait for region servers to report in.
     // With this as part of master initialization, it precludes our being able to start a single
     // server that is both Master and RegionServer. Needs more thought. TODO.
@@ -982,7 +982,6 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     status.setStatus("Starting cluster schema service");
     initClusterSchemaService();
-
     if (this.cpHost != null) {
       try {
         this.cpHost.preMasterInitialization();
@@ -1815,6 +1814,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       final byte [][] splitKeys,
       final long nonceGroup,
       final long nonce) throws IOException {
+        LOG.warn("RDMA debug, just think it is initialized");
     checkInitialized();
 
     String namespace = tableDescriptor.getTableName().getNamespaceAsString();

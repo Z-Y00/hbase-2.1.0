@@ -41,7 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import com.oracle.tools.packager.Log;
+//import com.oracle.tools.packager.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -441,19 +441,14 @@ public class SimpleRpcServer extends RpcServer {
       private synchronized void doRunLoop() {
         while (running) {
           try {
-            LOG.info(Thread.currentThread().getName() +
-                    String.format("PendingConnections size %d", pendingConnections.size()));
+
             Iterator<SimpleServerRdmaRpcConnection> iter = pendingConnections.iterator();
             while (iter.hasNext()) {
               LOG.warn("RDMA reader running");
               SimpleServerRdmaRpcConnection  rdma_conn= iter.next();
                 if (rdma_conn.isReadable()) {
-                  LOG.info(Thread.currentThread().getName() +
-                          String.format("Read from %s started try", rdma_conn.toString()));
                   doRead(rdma_conn);
-                  LOG.info(Thread.currentThread().getName() +
-                          String.format("Read from %s completed", rdma_conn.toString()));
-                  iter.remove();
+                  //iter.remove();
                 }
             }
           } catch (InterruptedException e) {
@@ -578,7 +573,7 @@ public class SimpleRpcServer extends RpcServer {
   }
 
   protected static void closeRdmaConnection(SimpleServerRdmaRpcConnection connection) {
-    if(!connection.rdmaconn.close())
+    //if(!connection.rdmaconn.close())
     {
       LOG.warn("RDMA close failed L583");
     }

@@ -534,15 +534,15 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
   private void setupRdmaIOstreams() throws IOException {
 
-      if(this.rdmaconn!=null){
-      if(this.rdmaconn.ifInit()){//this is already set
-        LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
-        //this.rdma_out.close();
-        this.rdma_out_stream.reset();//clear the underlying one.
-        return ;
-      }
-      LOG.warn("get a rdmaconn, not inited!!!");
-     }
+      //  if(this.rdmaconn!=null){
+      //  if(this.rdmaconn.ifInit()){//this is already set
+      //    LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
+      //    //this.rdma_out.close();
+      //    this.rdma_out_stream.reset();//clear the underlying one.
+      //    return ;
+      //  }
+      //  LOG.warn("get a rdmaconn, not inited!!!");
+      // }
     LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
     //try {
       //do this.rdmaconn=rdmaPool.acquire("10.10.0.112",this.rdmaPort);
@@ -766,7 +766,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       directbuf.put(tmp);
       if(!rdmaconn.writeQuery(directbuf))
       LOG.warn("RDMA writeQuery failed");
-
+      //rdmaconn.close();//close the one have problem, get a new
+      //return;
     } catch (Throwable t) {
       if(LOG.isTraceEnabled()) {
         LOG.trace("Error while writing call, call_id:" + call.id, t);
