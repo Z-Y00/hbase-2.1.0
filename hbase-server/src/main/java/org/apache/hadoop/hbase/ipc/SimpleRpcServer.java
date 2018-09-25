@@ -392,10 +392,10 @@ public class SimpleRpcServer extends RpcServer {
           conf.getInt("hbase.ipc.server.read.connection-queue.size", 100);
       // Create a new server socket and set to non blocking mode
 
-      if(port!=16020){//only for regionserver
-        LOG.warn("drop for the not regionserver"+name);
-        return;
-      }
+//      if(port!=16020){//only for regionserver
+//        LOG.warn("drop for the not regionserver"+name);
+//        return;
+//      }
       LOG.warn("Server Loading the rdmalib");
       rdma= new RdmaNative();
       LOG.warn("Server bind! the rdmalib");
@@ -544,11 +544,11 @@ public class SimpleRpcServer extends RpcServer {
     // Start the listener here and let it bind to the port
     listener = new Listener(name);
     this.port = listener.getAddress().getPort();
-    if(this.port==16020){
+//    if(this.port==16020){
       rdmalistener = new RdmaListener(name);
-      //this.rdmaPort=port+1;//TODO get it from conf  wtf!!! there are two !!
-      this.rdmaPort=2333;
-    }
+      this.rdmaPort=port+1;//TODO get it from conf  wtf!!! there are two !!
+//      this.rdmaPort=2333;
+//    }
 
     // Create the responder here
     responder = new SimpleRpcServerResponder(this);
@@ -598,9 +598,9 @@ public class SimpleRpcServer extends RpcServer {
     HBasePolicyProvider.init(conf, authManager);
     responder.start();
     listener.start();
-    if(this.port==16020){
+//    if(this.port==16020){
       rdmalistener.start();
-    }
+//    }
     
     scheduler.start();
     started = true;

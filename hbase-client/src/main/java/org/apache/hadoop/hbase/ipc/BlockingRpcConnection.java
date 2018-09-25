@@ -241,8 +241,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     header.writeTo(dos);
     assert baos.size() == 4 + header.getSerializedSize();
     this.connectionHeaderWithLength = baos.getBuffer();
-    //this.rdmaPort=remoteId.getAddress().getPort()+1;//plus one
-    this.rdmaPort=2333;
+    this.rdmaPort=remoteId.getAddress().getPort()+1;//plus one
+//    this.rdmaPort=2333;
 
     UserGroupInformation ticket = remoteId.ticket.getUGI();
     this.threadName = "IPC Client (" + this.rpcClient.socketFactory.hashCode() + ") connection to "
@@ -546,7 +546,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
     //try {
       //do this.rdmaconn=rdmaPool.acquire("10.10.0.112",this.rdmaPort);
-      do this.rdmaconn=rdma.rdmaConnect("10.10.0.112",this.rdmaPort);
+      do this.rdmaconn=rdma.rdmaConnect(remoteId.address.toString(),this.rdmaPort);
       while (this.rdmaconn==null);  
       
     //} catch (RdmaConnectionPool.RdmaConnectException e) {
