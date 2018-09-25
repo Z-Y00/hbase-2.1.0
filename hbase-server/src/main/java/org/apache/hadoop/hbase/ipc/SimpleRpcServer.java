@@ -94,6 +94,7 @@ public class SimpleRpcServer extends RpcServer {
   protected InetSocketAddress address;            // inet address we listen on
   private int readThreads;                        // number of read threads
 
+
   protected int socketSendBufferSize;
   protected final long purgeTimeout;    // in milliseconds
 
@@ -104,6 +105,9 @@ public class SimpleRpcServer extends RpcServer {
   protected SimpleRpcServerResponder responder = null;
   protected SimpleRpcServerRdmaResponder rdmaresponder = null;//TODO RGY
 
+  // public String getHostAddr(){
+  //   return listener.acceptChannel.hostAddress;
+  // }
   /** Listens on the socket. Creates jobs for the handler threads*/
   private class Listener extends Thread {
 
@@ -114,6 +118,7 @@ public class SimpleRpcServer extends RpcServer {
     private final int readerPendingConnectionQueueLength;
 
     private ExecutorService readPool;
+
 
     public Listener(final String name) throws IOException {
       super(name);

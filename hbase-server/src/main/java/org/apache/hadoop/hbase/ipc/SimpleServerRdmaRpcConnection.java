@@ -86,7 +86,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
     
-    this.hostAddress = "0.0.0.0";//tmp fix
+    this.hostAddress ="10.10.0.111";// rpcServer.getHostAddr();//tmp fix
     try {
       this.addr=InetAddress.getByName(this.hostAddress);
     } catch (Exception e) {
@@ -214,7 +214,10 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       //data.put(arr,0,realDataLength);
       SimpleRpcServer.LOG.warn("RDMA rbuf data section content" +" "+
       StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
-
+      if (realDataLength>dataLength)
+      {
+        connectionHeaderRead=false;//force it to read the head
+      }
       process();
 
 
@@ -287,7 +290,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
   @Override
   public synchronized void close() {
-    SimpleRpcServer.LOG.warn("RDMA refuse to close !!!");
+    SimpleRpcServer.LOG.warn("RDMA conn to close !!!");
     if(!rdmaconn.close())
     {
       SimpleRpcServer.LOG.warn("RDMA close failed L275");
