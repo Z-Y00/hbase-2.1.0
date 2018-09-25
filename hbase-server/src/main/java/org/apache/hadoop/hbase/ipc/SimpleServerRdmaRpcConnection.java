@@ -96,7 +96,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.rdmaresponder = rpcServer.rdmaresponder;
     do this.rdmaconn = rdma.rdmaBlockedAccept();
          while (this.rdmaconn==null);  
-    SimpleRpcServer.LOG.warn("RDMA rdmaBlockedAccept done!");// ??? null pointer?
+    SimpleRpcServer.LOG.warn("RDMA rdmaBlockedAccept done! from IP "+rdmaconn.getClientIp().toString());// ??? null pointer?
   }
 
   public void setLastContact(long lastContact) {

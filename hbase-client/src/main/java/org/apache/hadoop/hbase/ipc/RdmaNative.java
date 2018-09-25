@@ -94,6 +94,8 @@ public class RdmaNative {
     
             public native boolean isClosed();
             public native boolean isQueryReadable();
+            // get client ip address. ipv6 is not tested yet. (code for ipv6 maybe buggy)
+            public native byte [] getClientIp();
             // returned ByteBuffer MAY be invalidated on next readQuery()
             // return null object if the read failed.
             public native ByteBuffer readQuery();
