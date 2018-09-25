@@ -534,15 +534,15 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   }
   private void setupRdmaIOstreams() throws IOException {
 
-    //  if(this.rdmaconn!=null){
-    //  if(this.rdmaconn.ifInit()){//this is already set
-    //    LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
-    //    //this.rdma_out.close();
-    //    this.rdma_out_stream.reset();//clear the underlying one.
-    //    return ;
-    //  }
-    //  LOG.warn("get a rdmaconn, not inited!!!");
-    // }
+      if(this.rdmaconn!=null){
+      if(this.rdmaconn.ifInit()){//this is already set
+        LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
+        //this.rdma_out.close();
+        this.rdma_out_stream.reset();//clear the underlying one.
+        return ;
+      }
+      LOG.warn("get a rdmaconn, not inited!!!");
+     }
     LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
     //try {
       //do this.rdmaconn=rdmaPool.acquire("10.10.0.112",this.rdmaPort);
@@ -675,14 +675,15 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        
-      if ((!useSasl) && (remoteId.getAddress().getPort()==16020)&&(callMd.equals("Scan")))//this go to the regionserver
+      if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
+      ((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
       //for these belongs to one regionserver, so we get it to that same conn
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
       else
-      {LOG.warn("RDMA get a normal call with callMd "+ callMd);
+      {LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
         writeRequest(call);}
     }
   }
