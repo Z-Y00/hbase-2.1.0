@@ -894,7 +894,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     ReplicationPeerConfigUpgrader tableCFsUpdater =
         new ReplicationPeerConfigUpgrader(zooKeeper, conf);
     tableCFsUpdater.copyTableCFs();
-    LOG.warn("RDMA debug init hmaster 897");
+
     // Add the Observer to delete space quotas on table deletion before starting all CPs by
     // default with quota support, avoiding if user specifically asks to not load this Observer.
     if (QuotaUtil.isQuotaEnabled(conf)) {
@@ -977,7 +977,6 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.warn("RDMA debug init hmaster 977");
     status.setStatus("Starting cluster schema service");
     initClusterSchemaService();
-    LOG.warn("RDMA debug init hmaster 980");
     if (this.cpHost != null) {
       try {
         this.cpHost.preMasterInitialization();
@@ -987,7 +986,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
 
     status.markComplete("Initialization successful");
-    LOG.warn(String.format("Master has completed initialization %.3fsec",
+    LOG.info(String.format("Master has completed initialization %.3fsec",
        (System.currentTimeMillis() - masterActiveTime) / 1000.0f));
     this.masterFinishedInitializationTime = System.currentTimeMillis();
     configurationManager.registerObserver(this.balancer);
@@ -1127,16 +1126,12 @@ public class HMaster extends HRegionServer implements MasterServices {
   // Will be overridden in tests
   @VisibleForTesting
   protected void initClusterSchemaService() throws IOException, InterruptedException {
-    LOG.warn("RDMA debug init hmaster 1130");
     this.clusterSchemaService = new ClusterSchemaServiceImpl(this);
-    LOG.warn("RDMA debug init hmaster 1132");
     this.clusterSchemaService.startAsync();
-    LOG.warn("RDMA debug init hmaster 1134");
     try {
       this.clusterSchemaService.awaitRunning(getConfiguration().getInt(
         HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,
         DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS), TimeUnit.SECONDS);
-        LOG.warn("RDMA debug init hmaster 1139");
     } catch (TimeoutException toe) {
       throw new IOException("Timedout starting ClusterSchemaService", toe);
     }

@@ -80,11 +80,4 @@ public class NettyRpcClient extends AbstractRpcClient<NettyRpcConnection> {
       group.shutdownGracefully();
     }
   }
-
-  @Override
-  public void setRdma(){  
-}// do nothing
-@Override
-public void unsetRdma(){  
-}
 }

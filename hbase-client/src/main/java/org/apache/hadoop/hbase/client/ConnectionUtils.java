@@ -134,7 +134,7 @@ public final class ConnectionUtils {
     private final AdminService.BlockingInterface localHostAdmin;
     private final ClientService.BlockingInterface localHostClient;
 
-    private ShortCircuitingClusterConnection(boolean isRdma,Configuration conf, ExecutorService pool, User user,
+    private ShortCircuitingClusterConnection(Configuration conf, ExecutorService pool, User user,
         ServerName serverName, AdminService.BlockingInterface admin,
         ClientService.BlockingInterface client)
     throws IOException {
@@ -142,7 +142,6 @@ public final class ConnectionUtils {
       this.serverName = serverName;
       this.localHostAdmin = admin;
       this.localHostClient = client;
-      this.isRdma=isRdma;
     }
 
     @Override
@@ -176,14 +175,14 @@ public final class ConnectionUtils {
    * @return an short-circuit connection.
    * @throws IOException if IO failure occurred
    */
-  public static ClusterConnection createShortCircuitConnection(boolean isRdma,final Configuration conf,
+  public static ClusterConnection createShortCircuitConnection(final Configuration conf,
       ExecutorService pool, User user, final ServerName serverName,
       final AdminService.BlockingInterface admin, final ClientService.BlockingInterface client)
       throws IOException {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }
-    return new ShortCircuitingClusterConnection(isRdma,conf, pool, user, serverName, admin, client);
+    return new ShortCircuitingClusterConnection(conf, pool, user, serverName, admin, client);
   }
 
   /**

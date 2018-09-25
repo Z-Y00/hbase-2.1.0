@@ -148,7 +148,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
   private final int metaReplicaCallTimeoutScanInMicroSecond;
   private final int numTries;
   final int rpcTimeout;
-  boolean isRdma=true;
 
   /**
    * Global nonceGenerator shared per client.Currently there's no reason to limit its scope.
@@ -288,8 +287,6 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       retrieveClusterId();
 
       this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
-      if(!this.isRdma)
-      this.rpcClient.unsetRdma();
 
       // Do we publish the status?
       if (shouldListen) {
