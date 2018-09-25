@@ -88,7 +88,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
 @InterfaceAudience.Private
 class BlockingRpcConnection extends RpcConnection implements Runnable {
 
-  //public boolean isRdma=true;
   private static final Logger LOG = LoggerFactory.getLogger(BlockingRpcConnection.class);
 
   private final BlockingRpcClient rpcClient;
@@ -240,7 +239,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     header.writeTo(dos);
     assert baos.size() == 4 + header.getSerializedSize();
     this.connectionHeaderWithLength = baos.getBuffer();
-    this.rdmaPort=2333;//remoteId.getAddress().getPort()+1;//plus one
+    //this.rdmaPort=remoteId.getAddress().getPort()+1;//plus one
+    this.rdmaPort=2333;
 
     UserGroupInformation ticket = remoteId.ticket.getUGI();
     this.threadName = "IPC Client (" + this.rpcClient.socketFactory.hashCode() + ") connection to "
@@ -537,7 +537,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     //   this.rdma_out_stream.reset();//clear the underlying one.
     //   return ;
     // }
-    LOG.warn("RDMA rdmaConnect L538 with addr and port "+this.rdmaPort);
+    LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
     
     do this.rdmaconn=rdma.rdmaConnect("10.10.0.112",this.rdmaPort);
     while (this.rdmaconn==null);  
@@ -666,8 +666,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       //for these belongs to one regionserver, so we get it to that same conn
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
-        //writeRdmaRequest(call);}
-        writeRequest(call);}//debugging
+        writeRdmaRequest(call);}
+        //writeRequest(call);}//debugging
       else
       {LOG.warn("RDMA get a normal call with callMd "+ callMd);
         writeRequest(call);}
