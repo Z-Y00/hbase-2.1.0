@@ -502,6 +502,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
           }
         }
         this.in = new DataInputStream(new BufferedInputStream(inStream));
+        LOG.debug("in Initialized");
         this.out = new DataOutputStream(new BufferedOutputStream(outStream));
         // Now write out the connection header
           writeConnectionHeader();
@@ -788,6 +789,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     try {
       // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
+      LOG.debug("in is going to be USED.");
       int totalSize = in.readInt();
 
       // Read the header

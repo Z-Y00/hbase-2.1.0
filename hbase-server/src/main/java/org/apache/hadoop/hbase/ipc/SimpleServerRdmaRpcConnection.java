@@ -288,9 +288,9 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   @Override
   public synchronized void close() {
     SimpleRpcServer.LOG.warn("RDMA refuse to close !!!");
-    //if(!rdmaconn.close())
+    if(!rdmaconn.close())
     {
-      //SimpleRpcServer.LOG.warn("RDMA close failed L275");
+      SimpleRpcServer.LOG.warn("RDMA close failed L275");
     }
     //rdma.rdmaDestroyGlobal();
     data = null;

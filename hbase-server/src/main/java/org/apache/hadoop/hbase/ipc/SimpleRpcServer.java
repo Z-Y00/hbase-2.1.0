@@ -90,7 +90,7 @@ public class SimpleRpcServer extends RpcServer {
       
 
   protected int port;                             // port we listen on
-  protected int rdmaPort=2333;//rdma listener port
+  protected int rdmaPort;//rdma listener port
   protected InetSocketAddress address;            // inet address we listen on
   private int readThreads;                        // number of read threads
 
@@ -383,7 +383,7 @@ public class SimpleRpcServer extends RpcServer {
 
     private ExecutorService readPool;
 
-    public RdmaListener(final String name) throws IOException {
+    public RdmaListener(final String name, final int rdmaport) throws IOException {
       super(name);
       
       // The backlog of requests that we will have the serversocket carry.
@@ -399,7 +399,7 @@ public class SimpleRpcServer extends RpcServer {
       LOG.warn("Server Loading the rdmalib");
       rdma= new RdmaNative();
       LOG.warn("Server bind! the rdmalib");
-      rdma.rdmaBind(rdmaPort);
+      rdma.rdmaBind(rdmaport);
 
       readers = new Reader[readThreads];
       // Why this executor thing? Why not like hadoop just start up all the threads? I suppose it
@@ -545,8 +545,8 @@ public class SimpleRpcServer extends RpcServer {
     listener = new Listener(name);
     this.port = listener.getAddress().getPort();
 //    if(this.port==16020){
-      rdmalistener = new RdmaListener(name);
       this.rdmaPort=port+1;//TODO get it from conf  wtf!!! there are two !!
+        rdmalistener = new RdmaListener(name, rdmaPort);
 //      this.rdmaPort=2333;
 //    }
 
@@ -573,7 +573,7 @@ public class SimpleRpcServer extends RpcServer {
   }
 
   protected static void closeRdmaConnection(SimpleServerRdmaRpcConnection connection) {
-    //if(!connection.rdmaconn.close())
+    if(!connection.rdmaconn.close())
     {
       LOG.warn("RDMA close failed L583");
     }
