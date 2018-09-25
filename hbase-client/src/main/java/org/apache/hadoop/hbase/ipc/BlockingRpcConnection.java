@@ -105,7 +105,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private DataOutputStream rdma_out = null ;
   private ByteArrayOutputStream rdma_out_stream = null;
   private static RdmaNative rdma = new RdmaNative();
-  private RdmaNative.RdmaClientConnection rdmaconn;//init this at L723 
+  private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
+  private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
 
   public final int rdmaPort;
   private HBaseSaslRpcClient saslRpcClient;
@@ -538,9 +539,15 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     //   return ;
     // }
     LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
-    
-    do this.rdmaconn=rdma.rdmaConnect("10.10.0.112",this.rdmaPort);
-    while (this.rdmaconn==null);  
+    try {
+      do this.rdmaconn=rdmaPool.acquire("10.10.0.112",this.rdmaPort);
+      while (this.rdmaconn==null);  
+      
+    } catch (RdmaConnectionPool.RdmaConnectException e) {
+      LOG.warn("RDMA acquire failed "+e.toString());
+    }
+
+
     this.rdma_out_stream = new ByteArrayOutputStream();
     this.rdma_out = new DataOutputStream(this.rdma_out_stream);
     if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
