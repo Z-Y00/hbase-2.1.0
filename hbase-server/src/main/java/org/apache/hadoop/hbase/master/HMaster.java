@@ -935,7 +935,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     tableStateManager.start();
     // Wake up this server to check in
     sleeper.skipSleepCycle();
-    LOG.warn("RDMA debug init hmaster 938");
+    LOG.info("HMaster initialization finished TableStateManager");
     // Wait for region servers to report in.
     // With this as part of master initialization, it precludes our being able to start a single
     // server that is both Master and RegionServer. Needs more thought. TODO.
@@ -944,11 +944,12 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.info(Objects.toString(status));
     waitForRegionServers(status);
 
+    LOG.info("HMaster initialization finished waitRegionServers");
     // Check if master is shutting down because issue initializing regionservers or balancer.
     if (isStopped()) {
       return;
     }
-
+    LOG.info("HMaster initialization isStopped() check passed.");
     //Initialize after meta as it scans meta
     if (favoredNodesManager != null) {
       SnapshotOfRegionAssignmentFromMeta snapshotOfRegionAssignment =
@@ -956,11 +957,11 @@ public class HMaster extends HRegionServer implements MasterServices {
       snapshotOfRegionAssignment.initialize();
       favoredNodesManager.initialize(snapshotOfRegionAssignment);
     }
-
+    LOG.info("HMaster initialization finished favoredNodesManager initialize");
     // Fix up assignment manager status
     status.setStatus("Starting assignment manager");
-    this.assignmentManager.joinCluster();
-    LOG.warn("RDMA debug init hmaster 963");
+    this.assignmentManager.joinCluster(); // TODO IMZHWK: Master initialization fucks here!!!
+    LOG.info("HMaster initialization finished joinCluster()");
     // set cluster status again after user regions are assigned
     this.balancer.setClusterMetrics(getClusterMetricsWithoutCoprocessor());
 
@@ -974,7 +975,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     getChoreService().scheduleChore(normalizerChore);
     this.catalogJanitorChore = new CatalogJanitor(this);
     getChoreService().scheduleChore(catalogJanitorChore);
-    LOG.warn("RDMA debug init hmaster 977");
+    LOG.warn("HMaster initialization finished balancer");
     status.setStatus("Starting cluster schema service");
     initClusterSchemaService();
     if (this.cpHost != null) {
@@ -1809,7 +1810,7 @@ public class HMaster extends HRegionServer implements MasterServices {
       final byte [][] splitKeys,
       final long nonceGroup,
       final long nonce) throws IOException {
-        LOG.warn("RDMA debug, if initialized");
+        LOG.warn("HMaster createTable()");
     checkInitialized();
 
     String namespace = tableDescriptor.getTableName().getNamespaceAsString();

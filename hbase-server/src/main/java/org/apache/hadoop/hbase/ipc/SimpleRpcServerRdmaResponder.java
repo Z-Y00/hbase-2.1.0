@@ -49,18 +49,18 @@ class SimpleRpcServerRdmaResponder extends Thread {
 
   SimpleRpcServerRdmaResponder(SimpleRpcServer simpleRpcServer) throws IOException {
     this.simpleRpcServer = simpleRpcServer;
-    this.setName("RpcServer.responder");
+    this.setName("RDMA.RpcServer.responder");
     this.setDaemon(true);
     this.setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER);
   }
 
   @Override
   public void run() {
-    SimpleRpcServer.LOG.debug(getName() + ": starting");
+    SimpleRpcServer.LOG.info(getName() + ": starting");
     try {
       doRunLoop();
     } finally {
-      SimpleRpcServer.LOG.info(getName() + ": stopping");
+      SimpleRpcServer.LOG.warn(getName() + ": stopped");
     }
   }
 
@@ -70,10 +70,10 @@ class SimpleRpcServerRdmaResponder extends Thread {
       try {
         processAllResponses(connsQueue.poll());
       } catch (IOException ioe) {
-        SimpleRpcServer.LOG.error(getName() + "??", ioe);
+        SimpleRpcServer.LOG.error(getName() + "doRunLoop() -> connsQueue.poll() failed: ", ioe);
       }
     }
-    SimpleRpcServer.LOG.info(getName() + ": stopped");
+    SimpleRpcServer.LOG.warn(getName() + "doRunLoop() stopping");
   }
 
   /**
@@ -85,20 +85,24 @@ class SimpleRpcServerRdmaResponder extends Thread {
   private boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp)
       throws IOException {
     boolean error = true;
+    SimpleRpcServer.LOG.info(getName() + " processResponse() prepare");
     BufferChain buf = resp.getResponse();
     try {
       // Send as much data as we can in the non-blocking fashion
 
-      SimpleRpcServer.LOG.info(" RDMA recolic: rdmaHandler::doRespond");
+      SimpleRpcServer.LOG.info(getName() + " processResponse() -> writeResponse() prepare");
       ByteBuffer sbuf = buf.concat();
-      if (conn.rdmaconn.writeResponse(sbuf)) // TODO
+      if (conn.rdmaconn.writeResponse(sbuf)) {
+        SimpleRpcServer.LOG.info(getName() + " processResponse() -> writeResponse() success");
         error = true;
-      SimpleRpcServer.LOG.warn("RDMA processResponse");
-      error = false;
+      }else {
+        SimpleRpcServer.LOG.warn(getName() + " processResponse() -> writeResponse() failed");
+        error = false;
+      }
 
     } finally {
       if (error) {
-        SimpleRpcServer.LOG.debug(conn + ": output error -- closing");
+        SimpleRpcServer.LOG.debug(getName() + " processResponse() closing connection by previous error.");
         // We will be closing this connection itself. Mark this call as done so that all the
         // buffer(s) it got from pool can get released
         resp.done();
@@ -110,6 +114,7 @@ class SimpleRpcServerRdmaResponder extends Thread {
       resp.done();
       return true;
     } else {
+        simpleRpcServer.LOG.warn(getName() + " processResponse() detected RDMA writeResponse partially success");
       // set the serve time when the response has to be sent later
       conn.lastSentTime = System.currentTimeMillis();
       return false; // Socket can't take more, we will have to come back.
@@ -127,6 +132,7 @@ class SimpleRpcServerRdmaResponder extends Thread {
         if (connection==null) {
           return false;//Empty connsQueue
         }
+        simpleRpcServer.LOG.info(getName() + " processAllResponses() invoked.");
     // We want only one writer on the channel for a connection at a time.
     connection.responseWriteLock.lock();
     try {
@@ -136,6 +142,7 @@ class SimpleRpcServerRdmaResponder extends Thread {
         if (resp == null) {
           return true;
         }
+        simpleRpcServer.LOG.info(getName() + " processAllResponses() try one.");
         if (!processResponse(connection, resp)) {
           connection.responseQueue.addFirst(resp);
           return false;
@@ -152,7 +159,7 @@ class SimpleRpcServerRdmaResponder extends Thread {
   // Enqueue a response from the application.
   //
   void doRespond(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
-    SimpleRpcServer.LOG.info("recolic: rdma responder::doRespond");
+    simpleRpcServer.LOG.info(getName() + " doRespond() invoked.");
     boolean added = false;
     this.connsQueue.add(conn);//?? TODO
     // If there is already a write in progress, we don't wait. This allows to free the handlers
