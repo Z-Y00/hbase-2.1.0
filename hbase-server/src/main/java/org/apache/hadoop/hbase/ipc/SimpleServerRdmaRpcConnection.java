@@ -332,9 +332,10 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       ByteBuffer sbuf = buf.concat();
       if(!conn.rdmaconn.writeResponse(sbuf)) 
       {error = true;
-      SimpleRpcServer.LOG.warn("RDMA processResponse failed");}
+      SimpleRpcServer.LOG.warn("RDMA processResponse failed");
+      }else{
       error = false;
-      SimpleRpcServer.LOG.warn("RDMA processResponse done");
+      SimpleRpcServer.LOG.warn("RDMA processResponse done");}
     } finally {
       if (error) {
         SimpleRpcServer.LOG.debug(conn + ": RDMA failed -- closing");
