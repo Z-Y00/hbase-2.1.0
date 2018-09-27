@@ -557,14 +557,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
 
     this.rdma_out_stream = new ByteArrayOutputStream();
     this.rdma_out = new DataOutputStream(this.rdma_out_stream);
-    if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Not trying to connect to " + remoteId.address
-            + " this server is in the failed servers list");
-      }
-      throw new FailedServerException(
-          "This server is in the failed servers list: " + remoteId.address);
-    }
+
 
     try {
       if (LOG.isDebugEnabled()) {
@@ -677,7 +670,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
        String callMd = call.md.getName();
        
       if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
-      ((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
+      callMd.equals("Scan"))
+      //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
       //for these belongs to one regionserver, so we get it to that same conn
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
