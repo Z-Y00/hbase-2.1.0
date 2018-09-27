@@ -784,6 +784,10 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
       LOG.debug("in is going to be USED.");
+      if(in==null){
+        setupIOstreams();
+        LOG.debug("in is null! init here");
+      }
       int totalSize = in.readInt();
 
       // Read the header
