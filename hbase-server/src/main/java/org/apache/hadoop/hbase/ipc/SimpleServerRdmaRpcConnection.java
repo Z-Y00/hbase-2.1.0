@@ -323,32 +323,29 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 //this shouldn't be public , this should only be done via the rdma responder or handler. TODO RGY
   public static boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
     boolean error = true;
+    SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> RpcResponse getResponse()");
     BufferChain buf = resp.getResponse();
     try {
-
       ByteBuffer sbuf = buf.concat();
-      if(!conn.rdmaconn.writeResponse(sbuf)) 
-      {error = true;
-      SimpleRpcServer.LOG.warn("RDMARpcConn processResponse() -> writeResponse() -> failed");
-      }else{
-      error = false;
-      SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> writeResponse() -> done");}
-    } finally {
-      if (error) {
-        SimpleRpcServer.LOG.warn("RDMARpcConn closing due to previous failure.");
-        resp.done();
-        SimpleRpcServer.closeRdmaConnection(conn);
+      SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> try RDMAConn writeResponse()");
+      if (!conn.rdmaconn.writeResponse(sbuf)) {
+        error = true;
+        SimpleRpcServer.LOG.warn("RDMARpcConn processResponse() -> writeResponse() -> failed");
+      } else {
+        error = false;
+        SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> writeResponse() -> done");
       }
+    } catch (Exception e){
+      SimpleRpcServer.LOG.info("RDMARpcConn processResponse() !! EXCEPTION!");
+      e.printStackTrace();
     }
 
-    if (!buf.hasRemaining()) {
-      resp.done();
-      return true;
-    } else {
-      SimpleRpcServer.LOG.warn("RDMARpcConn detected RDMA writeResponse partially success, and this may indicate bugs");
-      // set the serve time when the response has to be sent later
-      conn.lastSentTime = System.currentTimeMillis();
-      return false; // Socket can't take more, we will have to come back.
+    resp.done();
+    if (error) {
+      SimpleRpcServer.LOG.warn("RDMARpcConn closing due to previous failure.");
+      SimpleRpcServer.closeRdmaConnection(conn);
+      return false;
     }
-  }
+    return true;
+
 }

@@ -49,7 +49,7 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerRdmaResponder rdmaresponder) {
     super(id, service, md, header, param, cellScanner, rdmaconnection, size, remoteAddress, receiveTime, timeout,
         reservoir, cellBlockBuilder, reqCleanup);
-    SimpleRpcServer.LOG.warn("RDMA: SimpleRdmaServerCall");
+    SimpleRpcServer.LOG.info("RDMASrvCall -> ctor()");
     //this.rdmaresponder = rdmaresponder;
 
   }
@@ -70,7 +70,7 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
     // set param null to reduce memory pressure
     //SimpleRpcServer.LOG.warn("RDMA ？ sendResponseIfReady");
     this.param = null;
-      SimpleRpcServer.LOG.warn("RDMA: sendResponseIfReady");
+      SimpleRpcServer.LOG.warn("RDMASrvCall sendResponseIfReady() -> RDMARpcConn processResponse(this)");
       SimpleServerRdmaRpcConnection.processResponse(this.connection,this);//TODO change to rdmahandler
 
   }
