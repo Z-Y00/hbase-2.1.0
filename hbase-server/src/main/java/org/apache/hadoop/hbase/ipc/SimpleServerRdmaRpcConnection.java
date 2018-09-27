@@ -121,7 +121,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       +rbuf.remaining() +", "+ StandardCharsets.UTF_8.decode(rbuf).toString() + ")");
       return true;
     } else {
-      SimpleRpcServer.LOG.info("RDMARpcConn not Readable");
+      // SimpleRpcServer.LOG.info("RDMARpcConn not Readable");
       return false;
     }
   }
