@@ -989,7 +989,7 @@ public class HMaster extends HRegionServer implements MasterServices {
     }
     
     status.markComplete("Initialization successful");
-    LOG.info(String.format("Master has completed initialization %.3fsec",
+    LOG.info(String.format("HMaster initialization  Master has completed initialization %.3fsec",
        (System.currentTimeMillis() - masterActiveTime) / 1000.0f));
     this.masterFinishedInitializationTime = System.currentTimeMillis();
     configurationManager.registerObserver(this.balancer);

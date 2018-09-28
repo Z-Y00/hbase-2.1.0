@@ -103,6 +103,7 @@ public class TableNamespaceManager implements Stoppable {
       long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
       while (!isTableAvailableAndInitialized()) {
+        LOG.warn("HMaster initialization TableNamespaceManager start() while looping");
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
           // We can't do anything if ns is not online.
           throw new IOException("Timedout " + timeout + "ms waiting for namespace table to "
@@ -217,7 +218,9 @@ public class TableNamespaceManager implements Stoppable {
   @SuppressWarnings("deprecation")
   private boolean isTableNamespaceManagerInitialized() throws IOException {
     if (initialized) {
+      LOG.warn("HMaster initialization isTableNamespaceManagerInitialized initialized");
       this.nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
+      LOG.warn("HMaster initialization isTableNamespaceManagerInitialized done");
       return true;
     }
     return false;

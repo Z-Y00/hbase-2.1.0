@@ -62,6 +62,7 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
   @Override
   public void done() {
     super.done();
+    //SimpleRpcServer.LOG.info("HMaster initialization debug .getConnection is not SimpleServerRdmaRpcConnection");
     this.getConnection().decRpcCount(); // Say that we're done with this call.
   }
 
@@ -76,6 +77,7 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
   }
 
   SimpleServerRdmaRpcConnection getConnection() {
+    //SimpleRpcServer.LOG.info("HMaster initialization debug .getConnection in SimpleServerRdmaRpcConnection");
     return this.connection;
   }
 }

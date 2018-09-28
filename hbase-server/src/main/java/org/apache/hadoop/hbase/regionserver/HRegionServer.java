@@ -2099,6 +2099,7 @@ public class HRegionServer extends HasThread implements
 
   @Override
   public Connection getConnection() {
+    LOG.warn("HMaster initialization getconnection in hregionserver");
     return getClusterConnection();
   }
 
