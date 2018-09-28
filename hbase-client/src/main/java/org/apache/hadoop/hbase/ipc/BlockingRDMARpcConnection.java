@@ -657,8 +657,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
        String callMd = call.md.getName();
        
       if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
-      callMd.equals("Scan"))
-      //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
+      //callMd.equals("Scan"))
+      ((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
       //for these belongs to one regionserver, so we get it to that same conn
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
