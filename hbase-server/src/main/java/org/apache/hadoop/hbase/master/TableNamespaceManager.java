@@ -223,6 +223,7 @@ public class TableNamespaceManager implements Stoppable {
       LOG.warn("HMaster initialization isTableNamespaceManagerInitialized done");
       return true;
     }
+    LOG.warn("HMaster initialization isTableNamespaceManagerInitialized not initialized");
     return false;
   }
 
@@ -272,7 +273,7 @@ public class TableNamespaceManager implements Stoppable {
     if (isTableNamespaceManagerInitialized()) {
       return true;
     }
-
+    LOG.warn("HMaster initialization isTableAvailableAndInitialized core");
     // Now check if the table is assigned, if not then fail fast
     if (isTableAssigned() && isTableEnabled()) {
       try {
@@ -280,7 +281,7 @@ public class TableNamespaceManager implements Stoppable {
         nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
         zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
         zkNamespaceManager.start();
-
+        LOG.warn("HMaster initialization zkNamespaceManager start done");
         if (get(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()) == null) {
           blockingCreateNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE);
         }
@@ -292,7 +293,7 @@ public class TableNamespaceManager implements Stoppable {
           // some required namespace is created asynchronized. We should complete init later.
           return false;
         }
-
+        LOG.warn("HMaster initialization isTableAvailableAndInitialized scanner start");
         ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
         try {
           for (Result result : scanner) {
@@ -310,7 +311,7 @@ public class TableNamespaceManager implements Stoppable {
         initialized = true;
         return true;
       } catch (IOException ie) {
-        LOG.warn("Caught exception in initializing namespace table manager", ie);
+        LOG.warn("HMaster initialization Caught exception in initializing namespace table manager", ie);
         if (nsTable != null) {
           nsTable.close();
         }

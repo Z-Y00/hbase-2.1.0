@@ -323,7 +323,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public static final String HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS =
     "hbase.master.wait.on.service.seconds";
-  public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 20;
+  public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 200;
 
   // Metrics for the HMaster
   final MetricsMaster metricsMaster;
