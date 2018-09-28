@@ -37,9 +37,14 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.AbstractService;
 import org.apache.hadoop.hbase.util.NonceKey;
 
+import org.apache.hadoop.hbase.log.HBaseMarkers;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @InterfaceAudience.Private
 class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaService {
   private final TableNamespaceManager tableNamespaceManager;
+  private static Logger LOG = LoggerFactory.getLogger(HMaster.class);//debugging
   private final MasterServices masterServices;
   private final static List<NamespaceDescriptor> EMPTY_NAMESPACE_LIST =
     Collections.unmodifiableList(new ArrayList<NamespaceDescriptor>(0));
@@ -60,10 +65,14 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
   public synchronized void doStart() {
     try {
       notifyStarted();
+
+    LOG.warn("HMaster initialization ClusterSchemaServiceImpl doStart");
       this.tableNamespaceManager.start();
+      LOG.warn("HMaster initialization ClusterSchemaServiceImpl doStart finished");
     } catch (IOException ioe) {
       notifyFailed(ioe);
     }
+    LOG.warn("HMaster initialization ClusterSchemaServiceImpl done");
   }
 
   @Override

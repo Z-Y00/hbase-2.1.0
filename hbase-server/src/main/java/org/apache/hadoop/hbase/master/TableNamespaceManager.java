@@ -91,12 +91,13 @@ public class TableNamespaceManager implements Stoppable {
   }
 
   public void start() throws IOException {
+    LOG.warn("HMaster initialization TableNamespaceManager start");
     if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
         TableName.NAMESPACE_TABLE_NAME)) {
-      LOG.info("Namespace table not found. Creating...");
+      LOG.info("HMaster initialization Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
-
+    LOG.warn("HMaster initialization createNamespaceTable done");
     try {
       // Wait for the namespace table to be initialized.
       long startTime = EnvironmentEdgeManager.currentTime();
@@ -112,6 +113,7 @@ public class TableNamespaceManager implements Stoppable {
     } catch (InterruptedException e) {
       throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
+    LOG.warn("HMaster initialization TableNamespaceManager start done");
   }
 
   private synchronized Table getNamespaceTable() throws IOException {

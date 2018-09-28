@@ -323,7 +323,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   public static final String HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS =
     "hbase.master.wait.on.service.seconds";
-  public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 5 * 60;
+  public static final int DEFAULT_HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS = 20;
 
   // Metrics for the HMaster
   final MetricsMaster metricsMaster;
@@ -978,14 +978,16 @@ public class HMaster extends HRegionServer implements MasterServices {
     LOG.warn("HMaster initialization finished balancer");
     status.setStatus("Starting cluster schema service");
     initClusterSchemaService();
+    LOG.warn("HMaster initialization finished schemaservice");
     if (this.cpHost != null) {
       try {
         this.cpHost.preMasterInitialization();
       } catch (IOException e) {
         LOG.error("Coprocessor preMasterInitialization() hook failed", e);
       }
+      LOG.warn("HMaster initialization preMasterInitialization done");
     }
-    LOG.warn("HMaster initialization finished schemaservice");
+    
     status.markComplete("Initialization successful");
     LOG.info(String.format("Master has completed initialization %.3fsec",
        (System.currentTimeMillis() - masterActiveTime) / 1000.0f));

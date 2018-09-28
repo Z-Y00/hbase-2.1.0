@@ -32,6 +32,9 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 
 /**
  * Similar to RegionServerCallable but for the AdminService interface. This service callable
@@ -42,6 +45,7 @@ import org.apache.hadoop.hbase.util.Bytes;
   justification="stub used by ipc")
 @InterfaceAudience.Private
 public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<T> {
+  //private static Logger LOG = LoggerFactory.getLogger(this.class);//debugging
   protected AdminService.BlockingInterface stub;
   protected final RpcControllerFactory rpcControllerFactory;
   private HBaseRpcController controller = null;
@@ -119,6 +123,7 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
    * @return {@link Connection} instance used by this Callable.
    */
   Connection getConnection() {
+    //LOG.info("HMaster initialization debug .getConnection in callable");
     return this.connection;
   }
 
