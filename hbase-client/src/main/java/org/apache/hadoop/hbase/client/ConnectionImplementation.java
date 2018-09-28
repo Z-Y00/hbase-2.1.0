@@ -287,7 +287,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       this.registry = AsyncRegistryFactory.getRegistry(conf);
       retrieveClusterId();
 
-      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
+      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,false);
 
       // Do we publish the status?
       if (shouldListen) {
@@ -313,6 +313,103 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
     }
   }
 
+  /**
+   * constructor
+   * @param conf Configuration object
+   */
+  ConnectionImplementation(Configuration conf,
+                           ExecutorService pool, User user,boolean isRdma) throws IOException {
+                            LOG.warn("HMaster initialization connectionImple ConnectionImplementation");
+    this.conf = conf;
+    this.user = user;
+    this.batchPool = pool;
+    this.connectionConfig = new ConnectionConfiguration(conf);
+    this.closed = false;
+    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
+        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
+    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
+    if (configuredPauseForCQTBE < pause) {
+      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
+          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
+          + ", will use " + pause + " instead.");
+      this.pauseForCQTBE = pause;
+    } else {
+      this.pauseForCQTBE = configuredPauseForCQTBE;
+    }
+    this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
+      HConstants.DEFAULT_USE_META_REPLICAS);
+    this.metaReplicaCallTimeoutScanInMicroSecond =
+        connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
+
+    // how many times to try, one more than max *retry* time
+    this.numTries = retries2Attempts(connectionConfig.getRetriesNumber());
+    this.rpcTimeout = conf.getInt(
+        HConstants.HBASE_RPC_TIMEOUT_KEY,
+        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    if (conf.getBoolean(NonceGenerator.CLIENT_NONCES_ENABLED_KEY, true)) {
+      synchronized (nonceGeneratorCreateLock) {
+        if (nonceGenerator == null) {
+          nonceGenerator = PerClientRandomNonceGenerator.get();
+        }
+      }
+    } else {
+      nonceGenerator = NO_NONCE_GENERATOR;
+    }
+
+    this.stats = ServerStatisticTracker.create(conf);
+    this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
+    this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
+    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
+    this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
+    this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
+    if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
+      this.metrics = new MetricsConnection(this);
+    } else {
+      this.metrics = null;
+    }
+    this.metaCache = new MetaCache(this.metrics);
+
+    boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
+        HConstants.STATUS_PUBLISHED_DEFAULT);
+    this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
+    Class<? extends ClusterStatusListener.Listener> listenerClass =
+        conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
+            ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
+            ClusterStatusListener.Listener.class);
+
+    // Is there an alternate BufferedMutator to use?
+    this.alternateBufferedMutatorClassName =
+        this.conf.get(BufferedMutator.CLASSNAME_KEY);
+
+    try {
+      this.registry = AsyncRegistryFactory.getRegistry(conf);
+      retrieveClusterId();
+
+      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,isRdma);
+
+      // Do we publish the status?
+      if (shouldListen) {
+        if (listenerClass == null) {
+          LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
+              ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
+        } else {
+          clusterStatusListener = new ClusterStatusListener(
+              new ClusterStatusListener.DeadServerHandler() {
+                @Override
+                public void newDead(ServerName sn) {
+                  clearCaches(sn);
+                  rpcClient.cancelConnections(sn);
+                }
+              }, conf, listenerClass);
+        }
+      }
+    } catch (Throwable e) {
+      // avoid leaks: registry, rpcClient, ...
+      LOG.debug("connection construction failed", e);
+      close();
+      throw e;
+    }
+  }
   /**
    * @param useMetaReplicas
    */

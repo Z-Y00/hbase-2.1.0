@@ -139,7 +139,7 @@ public final class ConnectionUtils {
         ClientService.BlockingInterface client)
     throws IOException {
       
-      super(conf, pool, user);
+      super(conf, pool, user, false);//not rdma
       this.serverName = serverName;
       this.localHostAdmin = admin;
       this.localHostClient = client;
@@ -203,7 +203,7 @@ public final class ConnectionUtils {
    */
   static class MasterlessConnection extends ConnectionImplementation {
     MasterlessConnection(Configuration conf, ExecutorService pool, User user) throws IOException {
-      super(conf, pool, user);
+      super(conf, pool, user,false);
     }
 
     @Override

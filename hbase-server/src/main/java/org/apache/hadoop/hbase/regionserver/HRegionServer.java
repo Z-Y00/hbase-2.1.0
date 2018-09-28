@@ -829,7 +829,7 @@ public class HRegionServer extends HasThread implements
       setupClusterConnection();
       // Setup RPC client for master communication
       this.rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
-          this.rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics());
+          this.rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics(),true);
     } catch (Throwable t) {
       // Call stop if error or process will stick around for ever since server
       // puts up non-daemon threads.
