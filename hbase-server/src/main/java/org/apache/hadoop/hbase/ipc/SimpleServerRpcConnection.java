@@ -243,7 +243,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       // the response. If we want the connection to be detected as idle properly, we
       // need to keep the inc / dec correct.
       incRpcCount();
-      SimpleRpcServer.LOG.info("SimpleRpcConn readAndProcess() init buffer length "+dataLength);
+      //SimpleRpcServer.LOG.info("SimpleRpcConn readAndProcess() init buffer length "+dataLength);
     }
 
     count = channelDataRead(channel, data);
@@ -255,7 +255,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     // data.rewind();
     //rewind to get it back
 
-    SimpleRpcServer.LOG.info("SimpleRpcConn readAndProcess() read data length "+count);
+    //SimpleRpcServer.LOG.info("SimpleRpcConn readAndProcess() read data length "+count);
 
     if (count >= 0 && data.remaining() == 0) { // count==0 if dataLength == 0
       process();

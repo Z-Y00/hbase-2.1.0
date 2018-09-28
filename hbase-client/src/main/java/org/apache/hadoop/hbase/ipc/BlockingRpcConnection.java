@@ -569,22 +569,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       rdma_out.write(connectionHeaderWithLength);// essential connectionHeaderRead
       this.rdmaconn.init();
 
-
-
     } catch (Throwable t) {
-      IOException e = ExceptionUtil.asInterrupt(t);
-      if (e == null) {
-        this.rpcClient.failedServers.addToFailedServers(remoteId.address, t);
-        if (t instanceof LinkageError) {
-          // probably the hbase hadoop version does not match the running hadoop version
-          e = new DoNotRetryIOException(t);
-        } else if (t instanceof IOException) {
-          e = (IOException) t;
-        } else {
-          e = new IOException("Could not set up IO Streams to " + remoteId.address, t);
-        }
-      }
-      throw e;
+      LOG.warn("Error in RDMA setupRDMAIOstream");
     }
 
     // start the receiver thread after the socket connection has been set up
@@ -764,11 +750,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       //rdmaconn.close();//close the one have problem, get a new
       //return;
     } catch (Throwable t) {
-      if(LOG.isTraceEnabled()) {
-        LOG.trace("Error while writing call, call_id:" + call.id, t);
-      }
-      IOException e = IPCUtil.toIOE(t);
-      closeConn(e);
+      LOG.warn("Error while writing RDMA call, call_id:" + call.id, t);
       return;
     }
     notifyAll();

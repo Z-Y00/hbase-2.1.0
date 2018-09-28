@@ -628,7 +628,7 @@ abstract class ServerRpcConnection implements Closeable {
     offset += headerSize;
     int id = header.getCallId();
     //if (RpcServer.LOG.isTraceEnabled()) {
-      RpcServer.LOG.warn("RequestHeader " + TextFormat.shortDebugString(header)//debug rgy
+      RpcServer.LOG.warn("RequestHeader " + TextFormat.shortDebugString(header)
           + " totalRequestSize: " + totalRequestSize + " bytes"+" and the service "+this.service);
     //}
     // Enforcing the call queue size, this triggers a retry in the client
