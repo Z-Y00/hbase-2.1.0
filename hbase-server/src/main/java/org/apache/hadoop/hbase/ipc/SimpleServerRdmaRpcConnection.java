@@ -117,8 +117,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       this.rbuf=rdmaconn.readQuery();
       this.rbuf.rewind();
       //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
-      //SimpleRpcServer.LOG.info("RDMARpcConn isReadable <- rbuf("
-      //+rbuf.remaining() +", "+ StandardCharsets.UTF_8.decode(rbuf).toString() + ")");
+      SimpleRpcServer.LOG.info("RDMARpcConn isReadable <- rbuf("
+      +rbuf.remaining() +", "+ StandardCharsets.UTF_8.decode(rbuf).toString() + ")");
       return true;
     } else {
       // SimpleRpcServer.LOG.info("RDMARpcConn not Readable");
@@ -191,7 +191,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     // Try and read in an int. it will be length of the data to read (or -1 if a ping). We catch the
     // integer length into the 4-byte this.dataLengthBuffer.
     int count = read4Bytes();
-    SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() -> read4Bytes() -> "+ count);
+    //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() -> read4Bytes() -> "+ count);
     if (count < 0 || dataLengthBuffer.remaining() > 0) {
       //SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> read4Bytes() Failed.");
       return count;
@@ -212,9 +212,9 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       byte[] arr = new byte[dataLength];
       rbuf.get(arr);
       data.put(arr, 0, dataLength);// debug
-      //data.put(arr,0,realDataLength);
-      //SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> rbuf -> "+
-      //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+      
+      SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> rbuf -> "+
+      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
       if (realDataLength>dataLength)
       {
         connectionHeaderRead=false;//force it to read the head
@@ -226,15 +226,15 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() read header done, continue to remain");
         if (!connectionHeaderRead)// force drop the conn header after first rbuf
           SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() header not read again.");
-        //count = read4Bytes();//drop the first 4bytes
+        
         int trueDataLength = realDataLength - dataLength ;
         initByteBuffToReadInto(trueDataLength);
         incRpcCount();
         byte[] arr2 = new byte[trueDataLength];
         rbuf.get(arr2);//read the left things
         data.put(arr2, 4, trueDataLength - 4);//drop the first int
-        //SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> rbuf -> "+
-         //       StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
+        SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> rbuf -> "+
+                StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
         process();
     }
     SimpleRpcServer.LOG.warn("RDMA readAndProcess done");

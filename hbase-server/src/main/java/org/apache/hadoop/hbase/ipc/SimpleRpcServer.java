@@ -445,7 +445,7 @@ public class SimpleRpcServer extends RpcServer {
       private synchronized void doRunLoop() {
         while (running) {
           try {
-
+            //LOG.warn("RDMA reader running");
             Iterator<SimpleServerRdmaRpcConnection> iter = pendingConnections.iterator();
             while (iter.hasNext()) {
               //LOG.warn("RDMA reader running");
@@ -453,7 +453,7 @@ public class SimpleRpcServer extends RpcServer {
                 if (rdma_conn.isReadable()) {
                   doRead(rdma_conn);
                   //closeRdmaConnection(rdma_conn);
-                  iter.remove();//just close it
+                  //iter.remove();//just close it
                 }
             }
           } catch (InterruptedException e) {
