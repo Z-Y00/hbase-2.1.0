@@ -86,11 +86,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeade
  * order.
  */
 @InterfaceAudience.Private
-class BlockingRpcConnection extends RpcConnection implements Runnable {
+class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
 
-  private static final Logger LOG = LoggerFactory.getLogger(BlockingRpcConnection.class);
+  private static final Logger LOG = LoggerFactory.getLogger(BlockingRDMARpcConnection.class);
 
-  private final BlockingRpcClient rpcClient;
+  private final BlockingRDMARpcClient rpcClient;
 
   private final String threadName;
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
@@ -162,7 +162,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
             + " to the write queue. callsToWrite.size()=" + callsToWrite.size());
       }
       callsToWrite.offer(call);
-      BlockingRpcConnection.this.notifyAll();
+      BlockingRDMARpcConnection.this.notifyAll();
     }
 
     public void remove(Call call) {
@@ -180,14 +180,14 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
      */
     @Override
     public void run() {
-      synchronized (BlockingRpcConnection.this) {
+      synchronized (BlockingRDMARpcConnection.this) {
         while (!closed) {
           if (callsToWrite.isEmpty()) {
             // We should use another monitor object here for better performance since the read
             // thread also uses ConnectionImpl.this. But this makes the locking schema more
             // complicated, can do it later as an optimization.
             try {
-              BlockingRpcConnection.this.wait();
+              BlockingRDMARpcConnection.this.wait();
             } catch (InterruptedException e) {
             }
             // check if we need to quit, so continue the main loop instead of fallback.
@@ -225,7 +225,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     }
   }
 
-  BlockingRpcConnection(BlockingRpcClient rpcClient, ConnectionId remoteId) throws IOException {
+  BlockingRDMARpcConnection(BlockingRDMARpcClient rpcClient, ConnectionId remoteId) throws IOException {
     super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
         rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
     this.rpcClient = rpcClient;
@@ -653,19 +653,19 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       // LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
       // StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
       // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
-      //  String callMd = call.md.getName();
+       String callMd = call.md.getName();
        
-      // if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
-      // callMd.equals("Scan"))
-      // //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
-      // //for these belongs to one regionserver, so we get it to that same conn
-      //   {
-      //     LOG.warn("RDMA get a call with callMd "+ callMd);
-        //writeRdmaRequest(call);}
-        writeRequest(call);}//debugging
-      // else
-      // {LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
-      //   writeRequest(call);}
+      if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
+      callMd.equals("Scan"))
+      //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
+      //for these belongs to one regionserver, so we get it to that same conn
+        {
+          LOG.warn("RDMA get a call with callMd "+ callMd);
+        writeRdmaRequest(call);}
+        //writeRequest(call);}//debugging
+      else
+      {LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
+        writeRequest(call);}
     }
   }
 
@@ -979,7 +979,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       @Override
       public void run(Object parameter) {
         setCancelled(call);
-        synchronized (BlockingRpcConnection.this) {
+        synchronized (BlockingRDMARpcConnection.this) {
           if (callSender != null) {
             callSender.remove(call);
           } else {

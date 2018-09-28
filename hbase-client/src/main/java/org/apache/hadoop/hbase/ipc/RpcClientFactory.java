@@ -91,3 +91,32 @@ public final class RpcClientFactory {
       new Object[] { conf, clusterId, localAddr, metrics });
   }
 }
+
+
+private static String getRDMARpcClientClass(Configuration conf) {
+  String rpcClientClass = conf.get(CUSTOM_RPC_CLIENT_IMPL_CONF_KEY);
+  if (rpcClientClass == null) {
+    // return NettyRpcClient.class.getName();
+    return BlockingRDMARpcClient.class.getName(); // recolic: use simple rpc cli
+  }
+  String mappedName = DEPRECATED_NAME_MAPPING.get(rpcClientClass);
+  return mappedName == null ? rpcClientClass : mappedName;
+}
+
+/**
+ * Creates a new RpcClient by the class defined in the configuration or falls back to
+ * RpcClientImpl
+ * @param conf configuration
+ * @param clusterId the cluster id
+ * @param localAddr client socket bind address.
+ * @param metrics the connection metrics
+ * @return newly created RpcClient
+ */
+public static RpcClient createRDMAClient(Configuration conf, String clusterId,
+    SocketAddress localAddr, MetricsConnection metrics) {
+  String rpcClientClass = getRDMARpcClientClass(conf);
+  return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
+      Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
+    new Object[] { conf, clusterId, localAddr, metrics });
+}
+}
