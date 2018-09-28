@@ -59,6 +59,7 @@ class BufferChain {
     return bytes;
   }
   
+  //concat with end of stream at each 
   ByteBuffer concat() {
     int length = 0;
     for (ByteBuffer bb : buffers) {
@@ -69,9 +70,8 @@ class BufferChain {
 
     // put all buffers from list
     for (ByteBuffer bb : buffers) {
-      bb.rewind();
+      //bb.rewind();
       bbNew.put(bb);
-      
     }
     bbNew.rewind();
     return bbNew;
