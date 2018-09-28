@@ -287,7 +287,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
       this.registry = AsyncRegistryFactory.getRegistry(conf);
       retrieveClusterId();
 
-      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,false);
+      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,true);
 
       // Do we publish the status?
       if (shouldListen) {
