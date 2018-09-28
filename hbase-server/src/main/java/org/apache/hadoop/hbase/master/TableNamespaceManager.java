@@ -276,6 +276,7 @@ public class TableNamespaceManager implements Stoppable {
     LOG.warn("HMaster initialization isTableAvailableAndInitialized core");
     // Now check if the table is assigned, if not then fail fast
     if (isTableAssigned() && isTableEnabled()) {
+      LOG.warn("HMaster initialization isTableAssigned() && isTableEnabled()");
       try {
         boolean initGoodSofar = true;
         nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
@@ -309,6 +310,7 @@ public class TableNamespaceManager implements Stoppable {
           scanner.close();
         }
         initialized = true;
+        LOG.warn("HMaster initialization isTableAvailableAndInitialized done!!!");
         return true;
       } catch (IOException ie) {
         LOG.warn("HMaster initialization Caught exception in initializing namespace table manager", ie);
