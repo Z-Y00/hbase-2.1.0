@@ -662,7 +662,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       //   {
       //     LOG.warn("RDMA get a call with callMd "+ callMd);
         //writeRdmaRequest(call);}
-        writeRequest(call);}//debugging
+        writeRequest(call);//}//debugging
       // else
       // {LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
       //   writeRequest(call);}

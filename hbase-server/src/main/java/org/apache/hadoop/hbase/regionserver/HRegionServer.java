@@ -771,6 +771,7 @@ public class HRegionServer extends HasThread implements
    */
   @VisibleForTesting
   protected ClusterConnection createClusterConnection() throws IOException {
+    LOG.warn("HMaster initialization hregionserver createClusterConnection");
     Configuration conf = this.conf;
     if (conf.get(HConstants.CLIENT_ZOOKEEPER_QUORUM) != null) {
       // Use server ZK cluster for server-issued connections, so we clone

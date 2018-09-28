@@ -90,7 +90,6 @@ public final class RpcClientFactory {
         Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
       new Object[] { conf, clusterId, localAddr, metrics });
   }
-}
 
 
 private static String getRDMARpcClientClass(Configuration conf) {

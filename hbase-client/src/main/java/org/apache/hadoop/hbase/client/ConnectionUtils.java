@@ -138,10 +138,12 @@ public final class ConnectionUtils {
         ServerName serverName, AdminService.BlockingInterface admin,
         ClientService.BlockingInterface client)
     throws IOException {
+      
       super(conf, pool, user);
       this.serverName = serverName;
       this.localHostAdmin = admin;
       this.localHostClient = client;
+      LOG.warn("HMaster initialization connectionUtils ShortCircuitingClusterConnection");
     }
 
     @Override
@@ -182,6 +184,7 @@ public final class ConnectionUtils {
     if (user == null) {
       user = UserProvider.instantiate(conf).getCurrent();
     }
+    LOG.warn("HMaster initialization connectionUtils createShortCircuitConnection");
     return new ShortCircuitingClusterConnection(conf, pool, user, serverName, admin, client);
   }
 
