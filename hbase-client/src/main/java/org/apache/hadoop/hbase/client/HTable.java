@@ -222,7 +222,6 @@ public class HTable implements Table {
    */
   @VisibleForTesting
   protected Connection getConnection() {
-    LOG.info("HMaster initialization debug .getConnection in htable");
     return this.connection;
   }
 

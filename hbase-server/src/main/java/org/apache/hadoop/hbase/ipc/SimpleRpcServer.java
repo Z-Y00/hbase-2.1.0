@@ -568,6 +568,7 @@ public class SimpleRpcServer extends RpcServer {
    * Connection implementations.
    */
   protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
+    LOG.info("HMaster initialization debug .getConnection in simpleRpcserver");
     return new SimpleServerRpcConnection(this, channel, time);
   }
   protected SimpleServerRdmaRpcConnection getRdmaConnection(int port, long time) {
