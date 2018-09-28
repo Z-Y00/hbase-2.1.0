@@ -909,11 +909,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         call.callStats.setResponseSizeBytes(totalSize);
         call.callStats
         .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
-        if (isFatalConnectionException(exceptionResponse)) {
-          synchronized (this) {
-            closeConn(re);
-          }
-        }
+
       } else {
         LOG.warn("RDMA noException! ");
         Message value = null;
@@ -938,21 +934,9 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
         .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
       }
       LOG.warn("RDMA  readRdmaResponse! done");
-    } catch (IOException e) {
+    } catch (IOException e){
       if (expectedCall) {
         call.setException(e);
-      }
-      if (e instanceof SocketTimeoutException) {
-        // Clean up open calls but don't treat this as a fatal condition,
-        // since we expect certain responses to not make it by the specified
-        // {@link ConnectionId#rpcTimeout}.
-        if (LOG.isTraceEnabled()) {
-          LOG.trace("ignored", e);
-        }
-      } else {
-        synchronized (this) {
-          closeConn(e);
-        }
       }
     }
   }
