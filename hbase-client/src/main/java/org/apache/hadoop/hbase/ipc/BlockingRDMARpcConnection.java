@@ -255,6 +255,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     } else {
       callSender = null;
     }
+    setupIOstreams();
   }
 
   // protected for write UT.
@@ -502,7 +503,6 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
           }
         }
         this.in = new DataInputStream(new BufferedInputStream(inStream));
-        LOG.debug("in Initialized");
         this.out = new DataOutputStream(new BufferedOutputStream(outStream));
         // Now write out the connection header
           writeConnectionHeader();
@@ -664,7 +664,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
       else
-      {LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
+      {//LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
         writeRequest(call);}
     }
   }
@@ -685,7 +685,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     }
     RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
 
-    setupIOstreams();
+
 
     // Now we're going to write the call. We take the lock, then check that the connection
     // is still valid, and, if so we do the write to the socket. If the write fails, we don't
@@ -763,13 +763,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     Call call = null;
     boolean expectedCall = false;
     try {
-      // See HBaseServer.Call.setResponse for where we write out the response.
-      // Total size of the response. Unused. But have to read it in anyways.
-      //LOG.debug("in is going to be USED.");
-      if(in==null){
-        setupIOstreams();
-        LOG.debug("in is null! init here");
-      }
+      setupIOstreams();
+    
       int totalSize = in.readInt();
 
       // Read the header
@@ -846,12 +841,12 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     }
   }
   private void readRdmaResponse() {//TODO rgy fork a thread to wait for the rdma respond
-    LOG.warn("RDMA Rdma waiting for Response");
+    //LOG.warn("RDMA Rdma waiting for Response");
     Call call = null;
     boolean expectedCall = false;
     try {
       ByteBuffer rbuf=this.rdmaconn.readResponse();
-      //LOG.warn("RDMA get rbuf readResponse! with length and content "+rbuf.remaining()+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
+      LOG.error("RDMA get rbuf readResponse!  ");
       rbuf.rewind();
       byte[] arr = new byte[rbuf.remaining()];
       rbuf.get(arr);
@@ -859,7 +854,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
       int totalSize = rdma_in.readInt();
-      LOG.warn("RDMA get rbuf readResponse! with totalSize "+totalSize);
+      //LOG.warn("RDMA get rbuf readResponse! with totalSize "+totalSize);
 
       // Read the header
       ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(rdma_in);
@@ -884,7 +879,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       }
       //no time out for rdma
       if (responseHeader.hasException()) {
-        LOG.warn("RDMA hasException! ");
+        LOG.error("RDMA hasException! ");
         ExceptionResponse exceptionResponse = responseHeader.getException();
         RemoteException re = createRemoteException(exceptionResponse);
         call.setException(re);
@@ -893,7 +888,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
 
       } else {
-        LOG.warn("RDMA noException! ");
+        LOG.error("RDMA noException! ");
         Message value = null;
         if (call.responseDefaultType != null) {
           Builder builder = call.responseDefaultType.newBuilderForType();
@@ -915,7 +910,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         call.callStats
         .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
       }
-      LOG.warn("RDMA  readRdmaResponse! done");
+      LOG.error("RDMA  readRdmaResponse! done");
     } catch (IOException e){
       if (expectedCall) {
         call.setException(e);
