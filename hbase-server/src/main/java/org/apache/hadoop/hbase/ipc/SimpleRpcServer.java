@@ -454,7 +454,7 @@ public class SimpleRpcServer extends RpcServer {
                 if (rdma_conn.isReadable()) {
                   doRead(rdma_conn);
                   //closeRdmaConnection(rdma_conn);
-                  //iter.remove();//just close it
+                  iter.remove();//just close it
                 }
             }
           } catch (InterruptedException e) {

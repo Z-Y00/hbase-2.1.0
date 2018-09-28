@@ -105,7 +105,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
   private DataOutputStream rdma_out = null ;
   private ByteArrayOutputStream rdma_out_stream = null;
   private static RdmaNative rdma = new RdmaNative();
-  private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
+  //private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
   //private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
    private RdmaNative.RdmaClientConnection rdmaconn;
 
