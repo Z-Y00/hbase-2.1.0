@@ -70,7 +70,7 @@ class BufferChain {
 
     // put all buffers from list
     for (ByteBuffer bb : buffers) {
-      //bb.rewind();
+      bb.rewind();
       bbNew.put(bb);
     }
     bbNew.rewind();

@@ -662,8 +662,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       //for these belongs to one regionserver, so we get it to that same conn
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
-        //writeRdmaRequest(call);}
-        writeRequest(call);}//debugging
+        writeRdmaRequest(call);}
+        //writeRequest(call);}//debugging
       else
       {//LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
         writeRequest(call);}
@@ -844,22 +844,23 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       }
     }
   }
-  private void readRdmaResponse() {//TODO rgy fork a thread to wait for the rdma respond, read several time for one rbuf we got
+  private void readRdmaResponse() {//TODO rgy fork a thread to wait for the rdma respond,
     Call call = null;
     boolean expectedCall = false;
     try {
       ByteBuffer rbuf=this.rdmaconn.readResponse();
-      LOG.error("RDMA get rbuf readResponse! with length and content "+rbuf.remaining()+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
+      int length = rbuf.remaining();
+      LOG.error("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
       rbuf.rewind();
-      byte[] arr = new byte[rbuf.remaining()];
+      byte[] arr = new byte[length];
       rbuf.get(arr);
       rdma_in=new DataInputStream(new ByteArrayInputStream(arr));
-
-      // See HBaseServer.Call.setResponse for where we write out the response.
+      int totalSize;
+      do {
+         // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
-      int totalSize = rdma_in.readInt();
+      totalSize = rdma_in.readInt();
       LOG.error("RDMA get rbuf totalSize "+totalSize);
-
       // Read the header
       ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(rdma_in);
       int id = responseHeader.getCallId();
@@ -881,7 +882,6 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         }
         return;
       }
-      //no time out for rdma
       if (responseHeader.hasException()) {
         LOG.error("RDMA hasException! ");
         ExceptionResponse exceptionResponse = responseHeader.getException();
@@ -909,6 +909,9 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         call.setResponse(value, cellBlockScanner);
         call.callStats.setResponseSizeBytes(totalSize);
       }
+        
+      } while (length > totalSize );
+     
       LOG.error("RDMA  readRdmaResponse! done");
       
     } catch (IOException e){

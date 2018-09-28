@@ -326,27 +326,41 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> RpcResponse getResponse()");
     BufferChain buf = resp.getResponse();
     try {
-      ByteArrayOutputStream rdma_out=new ByteArrayOutputStream();
-      int length = 0;
+      //ByteArrayOutputStream rdma_out=new ByteArrayOutputStream();
+      int length = buf.size();
+
+
+
       for (ByteBuffer var : buf.getBuffers()) {
-        var.rewind();
-        length+=var.remaining();
+        //var.rewind();
+        //length+=var.remaining();
         SimpleRpcServer.LOG.info("buf length " +var.remaining());
-        rdma_out.write(var,0,var.remaining());
+        //rdma_out.write(var,0,var.remaining());
       }
-      byte[] sbuf=rdma_out.toByteArray();
+      byte[] sbuf =buf.getBytes();
+      //byte[] sbuf=rdma_out.toByteArray();
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
-      ByteBuffer tmp = ByteBuffer.wrap(sbuf);
-      directbuf.put(tmp);
+      directbuf.put(sbuf);
+      //ByteBuffer directbuf=ByteBuffer.allocateDirect(length);
+      //ByteBuffer tmp = buf.concat(); //ByteBuffer.wrap(sbuf);
+      //directbuf.put(tmp);
+
+
+
+
+
+
+
       SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> try RDMAConn writeResponse()");
       if (!conn.rdmaconn.writeResponse(directbuf)) {
         error = true;
         SimpleRpcServer.LOG.warn("RDMARpcConn processResponse() -> writeResponse() -> failed");
       } else {
         error = false;
-        SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> writeResponse() -> done with length and content "+tmp.remaining()+"  "+ StandardCharsets.UTF_8.decode(tmp).toString());
+        directbuf.rewind();
+        SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> writeResponse() -> done with length and content "+directbuf.remaining()+"  "+ StandardCharsets.UTF_8.decode(directbuf).toString());
       }
-      rdma_out.close();
+      //rdma_out.close();
     } catch (Exception e){
       SimpleRpcServer.LOG.info("RDMARpcConn processResponse() !! EXCEPTION!");
       e.printStackTrace();
