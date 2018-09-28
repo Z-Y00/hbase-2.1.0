@@ -52,7 +52,7 @@ public interface Server extends Abortable, Stoppable {
    * by Server itself, so callers must NOT attempt to close connection obtained.
    */
   Connection getConnection();
-  Connection getNormalConnection();
+  //Connection getNormalConnection();
 
   Connection createConnection(Configuration conf) throws IOException;
 

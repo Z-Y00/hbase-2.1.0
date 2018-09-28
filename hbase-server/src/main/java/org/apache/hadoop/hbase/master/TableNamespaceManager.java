@@ -92,7 +92,7 @@ public class TableNamespaceManager implements Stoppable {
 
   public void start() throws IOException {
     LOG.warn("HMaster initialization TableNamespaceManager start");
-    if (!MetaTableAccessor.tableExists(masterServices.getNormalConnection(),
+    if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
         TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("HMaster initialization Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
@@ -219,7 +219,7 @@ public class TableNamespaceManager implements Stoppable {
   private boolean isTableNamespaceManagerInitialized() throws IOException {
     if (initialized) {
       LOG.warn("HMaster initialization isTableNamespaceManagerInitialized initialized");
-      this.nsTable = this.masterServices.getNormalConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
+      this.nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
       LOG.warn("HMaster initialization isTableNamespaceManagerInitialized done");
       return true;
     }
@@ -279,7 +279,7 @@ public class TableNamespaceManager implements Stoppable {
       LOG.warn("HMaster initialization isTableAssigned() && isTableEnabled()");
       try {
         boolean initGoodSofar = true;
-        nsTable = this.masterServices.getNormalConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
+        nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
         zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
         zkNamespaceManager.start();
         LOG.warn("HMaster initialization zkNamespaceManager start done");

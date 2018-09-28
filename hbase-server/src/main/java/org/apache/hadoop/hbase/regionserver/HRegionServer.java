@@ -2097,14 +2097,10 @@ public class HRegionServer extends HasThread implements
   public LogRoller getWalRoller() {
     return walRoller;
   }
-  @Override
-  public Connection getNormalConnection(){
-    LOG.warn("HMaster initialization getNormalConnection in hregionserver");
-    return getClusterConnection();
-  }
+
   @Override
   public Connection getConnection() {
-    //LOG.warn("HMaster initialization getconnection in hregionserver");
+    LOG.warn("HMaster initialization getconnection in hregionserver");//!!!! just this TODO 
     return getClusterConnection();
   }
 
