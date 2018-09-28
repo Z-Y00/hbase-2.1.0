@@ -860,8 +860,10 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(rdma_in);
       int id = responseHeader.getCallId();
       call = calls.remove(id); // call.done have to be set before leaving this method
+      LOG.error("RDMA remove call");
       expectedCall = (call != null && !call.isDone());
       if (!expectedCall) {
+        LOG.error("RDMA !expectedCall");
         // So we got a response for which we have no corresponding 'call' here on the client-side.
         // We probably timed out waiting, cleaned up all references, and now the server decides
         // to return a response. There is nothing we can do w/ the response at this stage. Clean
