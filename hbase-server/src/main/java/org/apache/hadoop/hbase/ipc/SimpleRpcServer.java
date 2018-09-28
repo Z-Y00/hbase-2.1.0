@@ -193,14 +193,13 @@ public class SimpleRpcServer extends RpcServer {
             }
             readSelector.select();
             Iterator<SelectionKey> iter = readSelector.selectedKeys().iterator();
-            LOG.warn("normal reader running");
             while (iter.hasNext()) {
               SelectionKey key = iter.next();
               iter.remove();
               if (key.isValid()) {
                 if (key.isReadable()) {
-                  doRead(key);
                   LOG.warn("normal reader doread");
+                  doRead(key);
                 }
               }
               key = null;

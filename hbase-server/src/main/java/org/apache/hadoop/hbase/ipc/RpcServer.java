@@ -407,7 +407,7 @@ public abstract class RpcServer implements RpcServerInterface,
       HBaseRpcController controller = new HBaseRpcControllerImpl(call.getCellScanner());
       controller.setCallTimeout(call.getTimeout());
       //seems we got suck here
-      LOG.warn("RDMA get to the result!");
+      //LOG.warn("RDMA get to the result!");
       Message result = call.getService().callBlockingMethod(md, controller, param);
       long receiveTime = call.getReceiveTime();
       long startTime = call.getStartTime();

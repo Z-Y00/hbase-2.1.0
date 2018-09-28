@@ -739,8 +739,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
       call.callStats.setRequestSizeBytes(write(this.rdma_out, requestHeader, call.param, cellBlock));
       
       byte[] sbuf=this.rdma_out_stream.toByteArray();
-      LOG.warn("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
-      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
+      //LOG.warn("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
+      //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
       //allocate direct buf
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
       ByteBuffer tmp = ByteBuffer.wrap(sbuf);
@@ -765,7 +765,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     try {
       // See HBaseServer.Call.setResponse for where we write out the response.
       // Total size of the response. Unused. But have to read it in anyways.
-      LOG.debug("in is going to be USED.");
+      //LOG.debug("in is going to be USED.");
       if(in==null){
         setupIOstreams();
         LOG.debug("in is null! init here");
@@ -851,7 +851,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     boolean expectedCall = false;
     try {
       ByteBuffer rbuf=this.rdmaconn.readResponse();
-      LOG.warn("RDMA get rbuf readResponse! with length and content "+rbuf.remaining()+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
+      //LOG.warn("RDMA get rbuf readResponse! with length and content "+rbuf.remaining()+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
       rbuf.rewind();
       byte[] arr = new byte[rbuf.remaining()];
       rbuf.get(arr);

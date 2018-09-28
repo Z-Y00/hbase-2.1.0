@@ -222,6 +222,7 @@ class SimpleRpcServerResponder extends Thread {
    */
   private boolean processResponse(SimpleServerRpcConnection conn, RpcResponse resp)
       throws IOException {
+        SimpleRpcServer.LOG.warn("RDMA debug normal send response");
     boolean error = true;
     BufferChain buf = resp.getResponse();
     try {

@@ -461,10 +461,10 @@ abstract class ServerRpcConnection implements Closeable {
     //   rbuflength);
 
     if (connectionHeaderRead) {
-      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");
+      //SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processRequest");
       processRequest(buf);
     } else {
-      SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processConnectionHeader");
+      //SimpleRpcServer.LOG.warn("RDMA/normal processOneRpc processConnectionHeader");
       processConnectionHeader(buf);
       this.connectionHeaderRead = true;
       if (!authorizeConnection()) {
@@ -629,7 +629,7 @@ abstract class ServerRpcConnection implements Closeable {
     int id = header.getCallId();
     //if (RpcServer.LOG.isTraceEnabled()) {
       RpcServer.LOG.warn("RequestHeader " + TextFormat.shortDebugString(header)
-          + " totalRequestSize: " + totalRequestSize + " bytes"+" and the service "+this.service);
+          + " the service "+this.service);
     //}
     // Enforcing the call queue size, this triggers a retry in the client
     // This is a bit late to be doing this check - we have already read in the

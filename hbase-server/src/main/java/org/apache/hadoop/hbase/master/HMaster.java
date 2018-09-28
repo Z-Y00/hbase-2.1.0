@@ -985,7 +985,7 @@ public class HMaster extends HRegionServer implements MasterServices {
         LOG.error("Coprocessor preMasterInitialization() hook failed", e);
       }
     }
-
+    LOG.warn("HMaster initialization finished schemaservice");
     status.markComplete("Initialization successful");
     LOG.info(String.format("Master has completed initialization %.3fsec",
        (System.currentTimeMillis() - masterActiveTime) / 1000.0f));
@@ -1025,7 +1025,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
     status.setStatus("Initializing MOB Cleaner");
     initMobCleaner();
-    LOG.warn("RDMA debug init hmaster 3.4");
+    //LOG.warn("RDMA debug init hmaster 3.4");
     status.setStatus("Calling postStartMaster coprocessors");
     if (this.cpHost != null) {
       // don't let cp initialization errors kill the master
@@ -1128,7 +1128,10 @@ public class HMaster extends HRegionServer implements MasterServices {
   @VisibleForTesting
   protected void initClusterSchemaService() throws IOException, InterruptedException {
     this.clusterSchemaService = new ClusterSchemaServiceImpl(this);
+    LOG.warn("HMaster initialization  ClusterSchemaServiceImpl new finished");
     this.clusterSchemaService.startAsync();
+
+    LOG.warn("HMaster initialization  startAsync finished");
     try {
       this.clusterSchemaService.awaitRunning(getConfiguration().getInt(
         HBASE_MASTER_WAIT_ON_SERVICE_IN_SECONDS,

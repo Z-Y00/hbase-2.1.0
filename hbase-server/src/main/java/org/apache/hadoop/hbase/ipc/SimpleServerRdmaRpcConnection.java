@@ -117,8 +117,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       this.rbuf=rdmaconn.readQuery();
       this.rbuf.rewind();
       //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
-      SimpleRpcServer.LOG.info("RDMARpcConn isReadable <- rbuf("
-      +rbuf.remaining() +", "+ StandardCharsets.UTF_8.decode(rbuf).toString() + ")");
+      //SimpleRpcServer.LOG.info("RDMARpcConn isReadable <- rbuf("
+      //+rbuf.remaining() +", "+ StandardCharsets.UTF_8.decode(rbuf).toString() + ")");
       return true;
     } else {
       // SimpleRpcServer.LOG.info("RDMARpcConn not Readable");
