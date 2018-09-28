@@ -91,7 +91,7 @@ public class TableNamespaceManager implements Stoppable {
   }
 
   public void start() throws IOException {
-    LOG.warn("HMaster initialization TableNamespaceManager start");
+    LOG.warn("HMaster initialization TableNamespaceManager start, going to call getConnection");
     if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
         TableName.NAMESPACE_TABLE_NAME)) {
       LOG.info("HMaster initialization Namespace table not found. Creating...");
@@ -218,7 +218,7 @@ public class TableNamespaceManager implements Stoppable {
   @SuppressWarnings("deprecation")
   private boolean isTableNamespaceManagerInitialized() throws IOException {
     if (initialized) {
-      LOG.warn("HMaster initialization isTableNamespaceManagerInitialized initialized");
+      LOG.warn("HMaster initialization isTableNamespaceManagerInitialized initialized going to call getConnection");
       this.nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
       LOG.warn("HMaster initialization isTableNamespaceManagerInitialized done");
       return true;
@@ -276,7 +276,7 @@ public class TableNamespaceManager implements Stoppable {
     LOG.warn("HMaster initialization isTableAvailableAndInitialized core");
     // Now check if the table is assigned, if not then fail fast
     if (isTableAssigned() && isTableEnabled()) {
-      LOG.warn("HMaster initialization isTableAssigned() && isTableEnabled()");
+      LOG.warn("HMaster initialization isTableAssigned() && isTableEnabled(). going to call getConnection");
       try {
         boolean initGoodSofar = true;
         nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
