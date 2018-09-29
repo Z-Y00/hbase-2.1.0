@@ -242,7 +242,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     assert baos.size() == 4 + header.getSerializedSize();
     this.connectionHeaderWithLength = baos.getBuffer();
     this.rdmaPort=remoteId.getAddress().getPort()+1;//plus one
-//    this.rdmaPort=2333;
+
 
     UserGroupInformation ticket = remoteId.ticket.getUGI();
     this.threadName = "IPC Client (" + this.rpcClient.socketFactory.hashCode() + ") connection to "
@@ -548,14 +548,9 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
 
        }
     LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
-    //try {
-      //do this.rdmaconn=rdmaPool.acquire("10.10.0.112",this.rdmaPort);
+
       do this.rdmaconn=rdma.rdmaConnect(remoteId.address.toString(),this.rdmaPort);
       while (this.rdmaconn==null);  
-      
-    //} catch (RdmaConnectionPool.RdmaConnectException e) {
-     // LOG.warn("RDMA pool acquire failed "+e.toString());
-   // }
 
 
     this.rdma_out_stream = new ByteArrayOutputStream();
@@ -658,10 +653,10 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
        String callMd = call.md.getName();
        
-      if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
-      //callMd.equals("Scan"))
-      ((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
-      //for these belongs to one regionserver, so we get it to that same conn
+      //if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
+      //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
+      //for these belongs to regionserver, so we get it to that same conn
+      if((!useSasl)&&(rdmaPort==16021))
         {
           LOG.warn("RDMA get a call with callMd "+ callMd);
         writeRdmaRequest(call);}
