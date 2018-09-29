@@ -85,7 +85,12 @@
         <description>
             </description>
     </property>
-
+    <property>
+        <name>CUSTOM_RPC_SERVER_IMPL_CONF_KEY</name>
+        <value>org.apache.hadoop.hbase.ipc.SimpleRpcServer</value>
+        <description>
+        </description>
+    </property>
     <property>
         <name>hbase.cluster.distributed</name>
         <value>true</value>
