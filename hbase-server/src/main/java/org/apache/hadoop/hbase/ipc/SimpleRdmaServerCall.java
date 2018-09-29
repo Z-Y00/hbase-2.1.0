@@ -69,7 +69,7 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
     this.param = null;
-      //SimpleRpcServer.LOG.warn("RDMASrvCall sendResponseIfReady() -> RDMARpcConn processResponse(this)");
+      //SimpleRpcServer.LOG.info("RDMASrvCall sendResponseIfReady() -> RDMARpcConn processResponse(this)");
       SimpleServerRdmaRpcConnection.processResponse(this.connection,this);
 
   }

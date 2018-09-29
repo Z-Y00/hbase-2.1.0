@@ -26,3 +26,6 @@ hbase-build-support/
 # recolic
 rbuild/bin
 #rbuild/*.sh
+
+# m2
+/.m2
