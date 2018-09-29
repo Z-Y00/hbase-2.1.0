@@ -49,7 +49,7 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
       CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerRdmaResponder rdmaresponder) {
     super(id, service, md, header, param, cellScanner, rdmaconnection, size, remoteAddress, receiveTime, timeout,
         reservoir, cellBlockBuilder, reqCleanup);
-    SimpleRpcServer.LOG.info("RDMASrvCall -> ctor()");
+    //SimpleRpcServer.LOG.info("RDMASrvCall -> ctor()");
     //this.rdmaresponder = rdmaresponder;
 
   }
@@ -62,22 +62,19 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
   @Override
   public void done() {
     super.done();
-    //SimpleRpcServer.LOG.info("HMaster initialization debug .getConnection is not SimpleServerRdmaRpcConnection");
     this.getConnection().decRpcCount(); // Say that we're done with this call.
   }
 
-  @Override///TODO rgy add rdma supplicant of this fun
+  @Override
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
-    //SimpleRpcServer.LOG.warn("RDMA ？ sendResponseIfReady");
     this.param = null;
-      SimpleRpcServer.LOG.warn("RDMASrvCall sendResponseIfReady() -> RDMARpcConn processResponse(this)");
-      SimpleServerRdmaRpcConnection.processResponse(this.connection,this);//TODO change to rdmahandler
+      //SimpleRpcServer.LOG.warn("RDMASrvCall sendResponseIfReady() -> RDMARpcConn processResponse(this)");
+      SimpleServerRdmaRpcConnection.processResponse(this.connection,this);
 
   }
 
   SimpleServerRdmaRpcConnection getConnection() {
-    //SimpleRpcServer.LOG.info("HMaster initialization debug .getConnection in SimpleServerRdmaRpcConnection");
     return this.connection;
   }
 }

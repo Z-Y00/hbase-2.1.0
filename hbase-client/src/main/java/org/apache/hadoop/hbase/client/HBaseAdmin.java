@@ -434,7 +434,6 @@ public class HBaseAdmin implements Admin {
   /** @return Connection used by this object. */
   @Override
   public Connection getConnection() {
-    LOG.info("HMaster initialization debug .getConnection in hbaseadmin");
     return connection;
   }
 

@@ -64,7 +64,7 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
     this.getConnection().decRpcCount(); // Say that we're done with this call.
   }
 
-  @Override///TODO rgy add rdma supplicant of this fun
+  @Override
   public synchronized void sendResponseIfReady() throws IOException {
     // set param null to reduce memory pressure
     this.param = null;

@@ -198,7 +198,7 @@ public class SimpleRpcServer extends RpcServer {
               iter.remove();
               if (key.isValid()) {
                 if (key.isReadable()) {
-                  LOG.warn("normal reader doread");
+                  //LOG.warn("normal reader doread");
                   doRead(key);
                 }
               }
@@ -380,7 +380,6 @@ public class SimpleRpcServer extends RpcServer {
   }
   private class RdmaListener extends Thread {
 
-    //private Selector selector = null; //TODO RDMA selector
     private Reader[] readers = null;
     private int currentReader = 0;
     private final int readerPendingConnectionQueueLength;
@@ -397,12 +396,12 @@ public class SimpleRpcServer extends RpcServer {
       // Create a new server socket and set to non blocking mode
 
       if(port!=16020){//only for regionserver
-        LOG.warn("drop for the not regionserver"+name);
+        LOG.info("drop for the not regionserver"+name);
         return;
       }
-      LOG.warn("Server Loading the rdmalib");
+      //LOG.warn("Server Loading the rdmalib");
       rdma= new RdmaNative();
-      LOG.warn("Server bind! the rdmalib");
+      //LOG.warn("Server bind! the rdmalib");
       rdma.rdmaBind(rdmaport);
 
       readers = new Reader[readThreads];
@@ -438,7 +437,7 @@ public class SimpleRpcServer extends RpcServer {
 
       @Override
       public void run() {
-        SimpleRpcServer.LOG.warn("RDMA reader starting");
+        SimpleRpcServer.LOG.info("RDMA reader starting");
           doRunLoop();
       }
 
@@ -466,7 +465,7 @@ public class SimpleRpcServer extends RpcServer {
         }
       }
       void doRead(SimpleServerRdmaRpcConnection c) throws InterruptedException {
-        SimpleRpcServer.LOG.warn("RDMA  reader doRead");
+        //SimpleRpcServer.LOG.warn("RDMA  reader doRead");
         int count;
         if (c == null) {
           return;
@@ -498,13 +497,12 @@ public class SimpleRpcServer extends RpcServer {
       justification="selector access is not synchronized; seems fine but concerned changing " +
         "it will have per impact")
     public void run() {
-      SimpleRpcServer.LOG.warn("RDMA listener start and bind at port "+ rdmaPort+" this rpcserver is at port "+port);
-      LOG.info(getName() + ": starting");
+      SimpleRpcServer.LOG.info("RDMA listener start and bind at port "+ rdmaPort+" this rpcserver is at port "+port);
       int i=1;
       while (running) {
         SimpleServerRdmaRpcConnection rdma_conn=getRdmaConnection(rdmaPort,System.currentTimeMillis());
         this.readers[i].pendingConnections.add(rdma_conn);
-      SimpleRpcServer.LOG.warn("RDMA listener add a conn to reader "+ i);
+      SimpleRpcServer.LOG.info("RDMA listener add a conn to reader "+ i);
       //   synchronized (this.readers[i].lock) {  should we add a lock????
       //     this.readers[i].lock.notify();
       // }
@@ -550,14 +548,14 @@ public class SimpleRpcServer extends RpcServer {
     listener = new Listener(name);
     this.port = listener.getAddress().getPort();
     if(this.port==16020){
-      this.rdmaPort=port+1;//TODO get it from conf  wtf!!! there are two !!
+      this.rdmaPort=port+1;
         rdmalistener = new RdmaListener(name, rdmaPort);
       
     }
 
     // Create the responder here
     responder = new SimpleRpcServerResponder(this);
-    connectionManager = new ConnectionManager(); //TODO RGY
+    connectionManager = new ConnectionManager(); 
     initReconfigurable(conf);
 
     this.scheduler.init(new RpcSchedulerContext(this));
@@ -568,7 +566,6 @@ public class SimpleRpcServer extends RpcServer {
    * Connection implementations.
    */
   protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
-    //LOG.info("HMaster initialization debug .getConnection in simpleRpcserver");
     return new SimpleServerRpcConnection(this, channel, time);
   }
   protected SimpleServerRdmaRpcConnection getRdmaConnection(int port, long time) {

@@ -123,7 +123,6 @@ public abstract class RegionAdminServiceCallable<T> implements RetryingCallable<
    * @return {@link Connection} instance used by this Callable.
    */
   Connection getConnection() {
-    //LOG.info("HMaster initialization debug .getConnection in callable");
     return this.connection;
   }
 

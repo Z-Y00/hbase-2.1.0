@@ -3,7 +3,7 @@
 #ID=' -i ~/.ssh/aliyun/id_rsa  rdma_match@202.114.10.172'
 mkdir -p ./rbuild/bin/lib
 cd ./hbase-server/
-mvn package -DskipTests
+mvn package clean -DskipTests
 cp ./target/hbase-server-2.1.0.jar ../rbuild/bin/lib
 cd ../hbase-client/
 mvn package -DskipTests

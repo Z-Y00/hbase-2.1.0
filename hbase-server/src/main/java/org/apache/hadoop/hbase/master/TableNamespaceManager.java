@@ -91,19 +91,16 @@ public class TableNamespaceManager implements Stoppable {
   }
 
   public void start() throws IOException {
-    LOG.warn("HMaster initialization TableNamespaceManager start, going to call getConnection");
     if (!MetaTableAccessor.tableExists(masterServices.getConnection(),
         TableName.NAMESPACE_TABLE_NAME)) {
-      LOG.info("HMaster initialization Namespace table not found. Creating...");
+      LOG.info(" Namespace table not found. Creating...");
       createNamespaceTable(masterServices);
     }
-    LOG.warn("HMaster initialization createNamespaceTable done");
     try {
       // Wait for the namespace table to be initialized.
       long startTime = EnvironmentEdgeManager.currentTime();
       int timeout = conf.getInt(NS_INIT_TIMEOUT, DEFAULT_NS_INIT_TIMEOUT);
       while (!isTableAvailableAndInitialized()) {
-        LOG.warn("HMaster initialization TableNamespaceManager start() while looping");
         if (EnvironmentEdgeManager.currentTime() - startTime + 100 > timeout) {
           // We can't do anything if ns is not online.
           throw new IOException("Timedout " + timeout + "ms waiting for namespace table to "
@@ -114,7 +111,6 @@ public class TableNamespaceManager implements Stoppable {
     } catch (InterruptedException e) {
       throw (InterruptedIOException) new InterruptedIOException().initCause(e);
     }
-    LOG.warn("HMaster initialization TableNamespaceManager start done");
   }
 
   private synchronized Table getNamespaceTable() throws IOException {
@@ -218,12 +214,9 @@ public class TableNamespaceManager implements Stoppable {
   @SuppressWarnings("deprecation")
   private boolean isTableNamespaceManagerInitialized() throws IOException {
     if (initialized) {
-      LOG.warn("HMaster initialization isTableNamespaceManagerInitialized initialized going to call getConnection");
       this.nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
-      LOG.warn("HMaster initialization isTableNamespaceManagerInitialized done");
       return true;
     }
-    LOG.warn("HMaster initialization isTableNamespaceManagerInitialized not initialized");
     return false;
   }
 
@@ -273,16 +266,13 @@ public class TableNamespaceManager implements Stoppable {
     if (isTableNamespaceManagerInitialized()) {
       return true;
     }
-    LOG.warn("HMaster initialization isTableAvailableAndInitialized core");
     // Now check if the table is assigned, if not then fail fast
     if (isTableAssigned() && isTableEnabled()) {
-      LOG.warn("HMaster initialization isTableAssigned() && isTableEnabled(). going to call getConnection");
       try {
         boolean initGoodSofar = true;
         nsTable = this.masterServices.getConnection().getTable(TableName.NAMESPACE_TABLE_NAME);
         zkNamespaceManager = new ZKNamespaceManager(masterServices.getZooKeeper());
         zkNamespaceManager.start();
-        LOG.warn("HMaster initialization zkNamespaceManager start done");
         if (get(nsTable, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()) == null) {
           blockingCreateNamespace(NamespaceDescriptor.DEFAULT_NAMESPACE);
         }
@@ -294,7 +284,6 @@ public class TableNamespaceManager implements Stoppable {
           // some required namespace is created asynchronized. We should complete init later.
           return false;
         }
-        LOG.warn("HMaster initialization isTableAvailableAndInitialized scanner start");
         ResultScanner scanner = nsTable.getScanner(HTableDescriptor.NAMESPACE_FAMILY_INFO_BYTES);
         try {
           for (Result result : scanner) {
@@ -310,17 +299,15 @@ public class TableNamespaceManager implements Stoppable {
           scanner.close();
         }
         initialized = true;
-        LOG.warn("HMaster initialization isTableAvailableAndInitialized done!!!");
         return true;
       } catch (IOException ie) {
-        LOG.warn("HMaster initialization Caught exception in initializing namespace table manager", ie);
+        LOG.warn(" Caught exception in initializing namespace table manager", ie);
         if (nsTable != null) {
           nsTable.close();
         }
         throw ie;
       }
     }
-    LOG.warn("HMaster initialization isTableAvailableAndInitialized failed!!!");
     return false;
   }
 

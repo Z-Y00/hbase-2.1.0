@@ -74,7 +74,6 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     this.lastContact = lastContact;
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
-    //SimpleRpcServer.LOG.info("HMaster initialization debug .getConnection in SimpleServerRpcConnection");
     this.socket = channel.socket();
     this.addr = socket.getInetAddress();
     if (addr == null) {
@@ -92,7 +91,6 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
       }
     }
     this.responder = rpcServer.responder;
-   // SimpleRpcServer.LOG.info("HMaster initialization debug .getConnection in SimpleServerRpcConnection done");
   }
 
 
@@ -368,7 +366,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   @Override
   protected void doRespond(RpcResponse resp) throws IOException {
-    SimpleRpcServer.LOG.info("SimpleRpcConn doRespond()");
+    //SimpleRpcServer.LOG.info("SimpleRpcConn doRespond()");
     responder.doRespond(this, resp);
   }
 }

@@ -66,13 +66,10 @@ class ClusterSchemaServiceImpl extends AbstractService implements ClusterSchemaS
     try {
       notifyStarted();
 
-    LOG.warn("HMaster initialization ClusterSchemaServiceImpl doStart");
       this.tableNamespaceManager.start();
-      LOG.warn("HMaster initialization ClusterSchemaServiceImpl doStart finished");
     } catch (IOException ioe) {
       notifyFailed(ioe);
     }
-    LOG.warn("HMaster initialization ClusterSchemaServiceImpl done");
   }
 
   @Override
