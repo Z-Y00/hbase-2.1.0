@@ -1,0 +1,53 @@
+
+./test.sh rdma  f 10 100000 1
+READ], Operations, 100000
+[READ], AverageLatency(us), 1086.51445
+[READ], MinLatency(us), 719
+[READ], MaxLatency(us), 162431
+[READ], 95thPercentileLatency(us), 1193
+[READ], 99thPercentileLatency(us), 1369
+[READ], Return=OK, 100000
+[READ-MODIFY-WRITE], Operations, 49922
+[READ-MODIFY-WRITE], AverageLatency(us), 2180.8817956011376
+[READ-MODIFY-WRITE], MinLatency(us), 1449
+[READ-MODIFY-WRITE], MaxLatency(us), 249599
+[READ-MODIFY-WRITE], 95thPercentileLatency(us), 2423
+[READ-MODIFY-WRITE], 99thPercentileLatency(us), 2911
+[UPDATE], Operations, 49922
+[UPDATE], AverageLatency(us), 1088.2127719242017
+[UPDATE], MinLatency(us), 715
+[UPDATE], MaxLatency(us), 73087
+[UPDATE], 95thPercentileLatency(us), 1214
+[UPDATE], 99thPercentileLatency(us), 1553
+[UPDATE], Return=OK, 49922
+
+
+
+
+
+./test.sh origin  f 10 100000 1
+[READ], Operations, 100000
+[READ], AverageLatency(us), 426.28004
+[READ], MinLatency(us), 169
+[READ], MaxLatency(us), 200191
+[READ], 95thPercentileLatency(us), 515
+[READ], 99thPercentileLatency(us), 810
+[READ], Return=OK, 100000
+[READ-MODIFY-WRITE], Operations, 49828
+[READ-MODIFY-WRITE], AverageLatency(us), 862.9902865858553
+[READ-MODIFY-WRITE], MinLatency(us), 351
+[READ-MODIFY-WRITE], MaxLatency(us), 81599
+[READ-MODIFY-WRITE], 95thPercentileLatency(us), 1119
+[READ-MODIFY-WRITE], 99thPercentileLatency(us), 1913
+[UPDATE], Operations, 49828
+[UPDATE], AverageLatency(us), 433.9849080838083
+[UPDATE], MinLatency(us), 170
+[UPDATE], MaxLatency(us), 72255
+[UPDATE], 95thPercentileLatency(us), 635
+[UPDATE], 99thPercentileLatency(us), 1108
+[UPDATE], Return=OK, 49828
+
+
+
+./test.sh rdma  f 1 20000 10
+./test.sh origin  f 1 20000 10

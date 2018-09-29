@@ -537,13 +537,13 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
   private void setupRdmaIOstreams() throws IOException {
 
         if(this.rdmaconn!=null){
-        if(this.rdmaconn.ifInit()){//this is already set
+        //if(this.rdmaconn.ifInit()){//this is already set
 
           //LOG.error("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
             ////this.rdma_out.close();
           this.rdma_out_stream.reset();//clear the underlying one.
           return ;
-        }
+        //}
         //LOG.error("get a rdmaconn, not inited!!!");
 
        }
@@ -647,7 +647,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       // LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
       // StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
       // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
-       String callMd = call.md.getName();
+       //String callMd = call.md.getName();
        
       //if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
       //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver

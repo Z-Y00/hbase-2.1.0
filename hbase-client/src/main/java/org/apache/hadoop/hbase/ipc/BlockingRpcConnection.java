@@ -594,7 +594,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
     try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
           call.span)) {
 
-            String callMd = call.md.getName();
+            //String callMd = call.md.getName();
             //LOG.debug("normal conn RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
         writeRequest(call);
 
