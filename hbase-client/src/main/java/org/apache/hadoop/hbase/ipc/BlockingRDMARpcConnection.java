@@ -538,12 +538,14 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
 
         if(this.rdmaconn!=null){
         if(this.rdmaconn.ifInit()){//this is already set
-          LOG.warn("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
-          //this.rdma_out.close();
+
+          LOG.error("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
+            ////this.rdma_out.close();
           this.rdma_out_stream.reset();//clear the underlying one.
           return ;
         }
-        LOG.warn("get a rdmaconn, not inited!!!");
+        LOG.error("get a rdmaconn, not inited!!!");
+
        }
     LOG.warn("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
     //try {
