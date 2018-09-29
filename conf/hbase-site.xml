@@ -81,7 +81,7 @@
     </property>
     <property>
         <name>CUSTOM_RPC_CLIENT_IMPL_CONF_KEY</name>
-        <value>BlockingRpcClient</value>
+        <value>org.apache.hadoop.hbase.ipc.RpcClientImpl</value>
         <description>
             </description>
     </property>

@@ -12,6 +12,8 @@ cd ../hbase-server/
 mvn package -DskipTests
 cp ./target/hbase-server-2.1.0.jar ../rbuild/bin/lib
 
+exit
+
 #find . -name 'hbase-server-2.1.0.jar'  -exec cp '{}' ./rbuild/bin/lib \;
 #find . -name 'hbase-client-2.1.0.jar'  -exec cp '{}' ./rbuild/bin/lib \;
 cd ../rbuild/bin/lib
