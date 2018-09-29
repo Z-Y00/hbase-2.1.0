@@ -319,7 +319,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
    */
   ConnectionImplementation(Configuration conf,
                            ExecutorService pool, User user,boolean isRdma) throws IOException {
-                            LOG.warn("HMaster initialization connectionImple ConnectionImplementation");
+                            //LOG.warn("HMaster initialization connectionImple ConnectionImplementation");
     this.conf = conf;
     this.user = user;
     this.batchPool = pool;

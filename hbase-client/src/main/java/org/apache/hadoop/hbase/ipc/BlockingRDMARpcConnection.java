@@ -742,14 +742,17 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       call.callStats.setRequestSizeBytes(write(this.rdma_out, requestHeader, call.param, cellBlock));
       
       byte[] sbuf=this.rdma_out_stream.toByteArray();
-      //LOG.warn("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
-      //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
+      LOG.error("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
+      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
       //allocate direct buf
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
       ByteBuffer tmp = ByteBuffer.wrap(sbuf);
       directbuf.put(tmp);
       if(!rdmaconn.writeQuery(directbuf))
       LOG.warn("RDMA writeQuery failed");
+
+      LOG.error("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
+      StandardCharsets.UTF_8.decode(directbuf).toString());
       //rdmaconn.close();//close the one have problem, get a new
       //return;
     } catch (Throwable t) {
