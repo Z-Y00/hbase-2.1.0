@@ -647,7 +647,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       // LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
       // StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
       // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
-       //String callMd = call.md.getName();
+       String callMd = call.md.getName();
        
       //if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
       //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
@@ -658,7 +658,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
       else
-      {//LOG.warn("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
+      {//LOG.debug("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
         writeRequest(call);}
     }
   }
@@ -751,7 +751,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       return;
     }
     notifyAll();
-    readRdmaResponse();//we have to add it here,for the normal one is in the run() RGY
+    readRdmaResponse();//waiting for the response
   }
   /*
    * Receive a response. Because only one receiver, so no synchronization on in.
@@ -840,7 +840,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       }
     }
   }
-  private void readRdmaResponse() {//TODO rgy fork a thread to wait for the rdma respond,
+  private void readRdmaResponse() {
     Call call = null;
     boolean expectedCall = false;
     try {

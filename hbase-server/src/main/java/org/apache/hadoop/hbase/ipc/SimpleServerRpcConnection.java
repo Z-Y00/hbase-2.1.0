@@ -247,7 +247,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
     }
 
     count = channelDataRead(channel, data);
-    //debug dump rgy
+
     // byte[] arr = new byte[data.remaining()];//don't do the dump here!!
     // data.put(arr);
     // SimpleRpcServer.LOG.warn("RDMA normal get data section content" +" "+

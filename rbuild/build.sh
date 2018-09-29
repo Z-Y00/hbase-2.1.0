@@ -18,5 +18,5 @@ cd ..
 mvn -DskipTests package assembly:single $m2
 
 cd ./hbase-assembly/target/
-cp ./*.gz  ../rbuild/bin/
+cp ./*.gz  ../../rbuild/bin/
 exit

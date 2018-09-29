@@ -187,7 +187,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   }
 
   @Override
-  public synchronized void setResponse(Message m, final CellScanner cells,//TODO RGY change the other response in this file
+  public synchronized void setResponse(Message m, final CellScanner cells,
       Throwable t, String errorMsg) {
         //RpcServer.LOG.warn("RDMA debug called  setResponse");
     if (this.isError) return;
@@ -205,24 +205,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
       // high when we can avoid a big buffer allocation on each rpc.
       List<ByteBuffer> cellBlock = null;
       int cellBlockSize = 0;
-      // if (this.isRdma) {
-      //   if (this.reservoir != null) {
-      //     this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.rdmaconn.codec,
-      //       this.rdmaconn.compressionCodec, cells, this.reservoir);
-      //     if (this.cellBlockStream != null) {
-      //       cellBlock = this.cellBlockStream.getByteBuffers();
-      //       cellBlockSize = this.cellBlockStream.size();
-      //     }
-      //   } else {
-      //     ByteBuffer b = this.cellBlockBuilder.buildCellBlock(this.rdmaconn.codec,
-      //       this.rdmaconn.compressionCodec, cells);
-      //     if (b != null) {
-      //       cellBlockSize = b.remaining();
-      //       cellBlock = new ArrayList<>(1);
-      //       cellBlock.add(b);
-      //     }
-      //   }
-      // } else {
+
         if (this.reservoir != null) {
           this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.connection.codec,
             this.connection.compressionCodec, cells, this.reservoir);
@@ -411,8 +394,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
   }
 
   @Override
-  public long disconnectSince() {//force return -1L, to get the rdma debug
-    //TODO !!! RGY add support for this 
+  public long disconnectSince() {
     if (!this.connection.isConnectionOpen()) {
       return System.currentTimeMillis() - receiveTime;
     } else {

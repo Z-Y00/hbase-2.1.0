@@ -96,7 +96,7 @@ abstract class ServerRpcConnection implements Closeable {
   // disconnected, we can say where it used to connect to.
   protected String hostAddress;
   protected int remotePort;
-  protected InetAddress addr;//TODO RGY get rdma init of this 
+  protected InetAddress addr;//TODO Y00 RDMA get rdma init of this 
   protected ConnectionHeader connectionHeader;
 
   /**

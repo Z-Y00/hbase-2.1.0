@@ -91,7 +91,7 @@ private static String getRDMARpcClientClass(Configuration conf) {
 public static RpcClient createClient(Configuration conf, String clusterId,
     SocketAddress localAddr, MetricsConnection metrics,boolean isRdma) {
       //String rpcClientClass = getRDMARpcClientClass(conf);
-  String rpcClientClass = isRdma?getRDMARpcClientClass(conf):getRpcClientClass(conf);
+  String rpcClientClass = isRdma?getRDMARpcClientClass(conf):getRDMARpcClientClass(conf);//debugging
   return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
       Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
     new Object[] { conf, clusterId, localAddr, metrics });

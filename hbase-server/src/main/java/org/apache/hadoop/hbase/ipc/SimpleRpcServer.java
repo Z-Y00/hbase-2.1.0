@@ -103,7 +103,6 @@ public class SimpleRpcServer extends RpcServer {
   private Listener listener = null;
   private RdmaListener rdmalistener = null;
   protected SimpleRpcServerResponder responder = null;
-  protected SimpleRpcServerRdmaResponder rdmaresponder = null;//TODO RGY
 
   // public String getHostAddr(){
   //   return listener.acceptChannel.hostAddress;
@@ -667,7 +666,6 @@ public class SimpleRpcServer extends RpcServer {
       long startTime, int timeout) throws IOException {
     SimpleServerCall fakeCall = new SimpleServerCall(-1, service, md, null, param, cellScanner,
         null, -1, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, responder);
-        //rgy added respnder to force it to use the normal
     return call(fakeCall, status);
   }
 

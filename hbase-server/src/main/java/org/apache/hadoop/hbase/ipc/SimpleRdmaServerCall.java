@@ -46,11 +46,10 @@ class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
       RequestHeader header, Message param, CellScanner cellScanner, 
       SimpleServerRdmaRpcConnection rdmaconnection, long size,
       final InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
-      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup, SimpleRpcServerRdmaResponder rdmaresponder) {
+      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
     super(id, service, md, header, param, cellScanner, rdmaconnection, size, remoteAddress, receiveTime, timeout,
         reservoir, cellBlockBuilder, reqCleanup);
     //SimpleRpcServer.LOG.info("RDMASrvCall -> ctor()");
-    //this.rdmaresponder = rdmaresponder;
 
   }
 

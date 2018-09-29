@@ -68,7 +68,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   private DataInputStream rdma_in;
   private final LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
   private long lastContact;
-  final SimpleRpcServerRdmaResponder rdmaresponder;
+  //final SimpleRpcServerRdmaResponder rdmaresponder;
   //final RdmaHandler rdmahandler;
 
   // If initial preamble with version and magic has been read or not.
@@ -93,7 +93,6 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       SimpleRpcServer.LOG.warn("RDMARpcConn init addr failed.");
     }
     this.remotePort = port;
-    this.rdmaresponder = rpcServer.rdmaresponder;
     do this.rdmaconn = rdma.rdmaBlockedAccept();
          while (this.rdmaconn==null);  
     SimpleRpcServer.LOG.info("RDMARpcConn rdmaAccept <- "+rdmaconn.getClientIp().toString());
@@ -180,7 +179,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
    * @throws IOException
    * @throws InterruptedException
    */
-  public int readAndProcess() throws IOException, InterruptedException {//TODO RGY change to better responder
+  public int readAndProcess() throws IOException, InterruptedException {
     //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() invoked.");
 
     if (!connectionHeaderRead)// force drop the conn header after first rbuf
@@ -197,7 +196,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       return count;
     }
 
-    //if (data == null) { //TODO RGY debugging always init the data buffer
+    //if (data == null) { //TODO always init the data buffer? Y00
       dataLengthBuffer.flip();
       int dataLength = dataLengthBuffer.getInt();
       //SimpleRpcServer.LOG.debug("RDMARpcConn readAndProcess() -> dataLength "+ dataLength);
@@ -312,7 +311,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         //SimpleRpcServer.LOG.warn("RDMARpcConn createCall()");
     return new SimpleRdmaServerCall(id, service, md, header, param, cellScanner, this, size,
         remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
-        this.rpcServer.cellBlockBuilder, reqCleanup, this.rdmaresponder);
+        this.rpcServer.cellBlockBuilder, reqCleanup);
   }
 
   @Override
@@ -320,7 +319,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     //SimpleRpcServer.LOG.warn("RDMARpcConn doRespond()");
     processResponse(this, resp);// this should be okey if we just respond it here,without a responder? TODO
   }
-//this shouldn't be public , this should only be done via the rdma responder or handler. TODO RGY
+
   public static boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
     boolean error = true;
     //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> RpcResponse getResponse()");
