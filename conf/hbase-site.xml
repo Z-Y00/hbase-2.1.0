@@ -80,13 +80,13 @@
             servers.</description>
     </property>
     <property>
-        <name>CUSTOM_RPC_CLIENT_IMPL_CONF_KEY</name>
+        <name>hbase.rpc.client.impl</name>
         <value>org.apache.hadoop.hbase.ipc.RpcClientImpl</value>
         <description>
             </description>
     </property>
     <property>
-        <name>CUSTOM_RPC_SERVER_IMPL_CONF_KEY</name>
+        <name>hbase.rpc.server.impl</name>
         <value>org.apache.hadoop.hbase.ipc.SimpleRpcServer</value>
         <description>
         </description>
