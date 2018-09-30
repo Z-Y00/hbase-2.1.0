@@ -140,6 +140,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
   private class RobinCallSender extends Thread {
     private final CallSender realSenders[]; // create an array here
     private final int robinSize;
+    private int robin=0;
     public RobinCallSender(String name, Configuration conf, int size) {
         robinSize = size;
         realSenders = new CallSender[size];
@@ -149,12 +150,12 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     }
 
     public void sendCall(final Call call) throws IOException {
-      LOG.error("add a call to "+ call.hashCode()%robinSize);  
+      //LOG.error("add a call to "+ call.hashCode()%robinSize);  
       realSenders[call.hashCode()%robinSize].sendCall(call);
 
     }
     public void remove(Call call) {
-      LOG.error("remove a call from "+ call.hashCode()%robinSize);  
+      //LOG.error("remove a call from "+ call.hashCode()%robinSize);  
         realSenders[call.hashCode()%robinSize].remove(call);
     }
     public void run() {
@@ -273,7 +274,7 @@ private void writeRdmaRequest(Call call) throws IOException {
   }
   //
   readRdmaResponse();//waiting for the response
-  LOG.error("RDMA readRdmaResponse done");
+  //LOG.error("RDMA readRdmaResponse done");
 }
 private void readRdmaResponse() {
   Call call = null;
@@ -1013,8 +1014,12 @@ private void readRdmaResponse() {
   @Override
   public synchronized void shutdown() {
     closed = true;
+    LOG.error("shutdown !");
     if (RobinCallSender != null) {
-      RobinCallSender.interrupt();
+    
+        LOG.error("shutdown now !");
+  
+      
     }
     closeConn(new IOException("connection to " + remoteId.address + " closed"));
   }
