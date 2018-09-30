@@ -844,9 +844,13 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     Call call = null;
     boolean expectedCall = false;
     try {
+      LOG.info("RDMA readRdmaResponse waiting");
       ByteBuffer rbuf=this.rdmaconn.readResponse();
+      if (rbuf==null) {
+        LOG.info("RDMA readRdmaResponse lbs' bug");
+      }
       int length = rbuf.remaining();
-      //LOG.trace("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
+      LOG.info("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
       rbuf.rewind();
       byte[] arr = new byte[length];
       rbuf.get(arr);

@@ -62,6 +62,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   private RdmaNative rdma= new RdmaNative();
   public  RdmaNative.RdmaServerConnection rdmaconn;//the core of the rdmaconn class TODO init  these two
   private ByteBuff data;
+  private byte[] arr;
+  private int oldDataLength;
   private ByteBuffer dataLengthBuffer;
   private ByteBuffer preambleBuffer;
   private ByteBuffer rbuf;
@@ -85,6 +87,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.connectionHeaderRead=false;
     this.data = null;
     this.dataLengthBuffer = ByteBuffer.allocate(4);
+    this.oldDataLength=0;
+    this.arr=null;
     
     this.hostAddress ="0.0.0.0";// rpcServer.getHostAddr();//tmp fix
     try {
@@ -202,13 +206,16 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       //SimpleRpcServer.LOG.debug("RDMARpcConn readAndProcess() -> dataLength "+ dataLength);
       int realDataLength=rbuf.remaining();
 
- 
+      if(oldDataLength<dataLength | data==null){
+        SimpleRpcServer.LOG.error("init data! ");
       initByteBuffToReadInto(dataLength);
-
+      this.arr = new byte[dataLength];
+      this.oldDataLength=dataLength;
+      }
       incRpcCount();
 
       //SimpleRpcServer.LOG.debug("RDMARpcConn readAndProcess() -> rbuf remaining " + rbuf.remaining());
-      byte[] arr = new byte[dataLength];
+      
       rbuf.get(arr);
       data.put(arr, 0, dataLength);// debug
       
@@ -227,11 +234,17 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         //  SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() header not read !?");
         
         int trueDataLength = realDataLength - dataLength ;
+        if(oldDataLength<trueDataLength | data==null){
+          SimpleRpcServer.LOG.error("re init data! ");
         initByteBuffToReadInto(trueDataLength);
+        arr = new byte[trueDataLength];
+        this.oldDataLength=trueDataLength;
+        }
+
         incRpcCount();
-        byte[] arr2 = new byte[trueDataLength];
-        rbuf.get(arr2);//read the left things
-        data.put(arr2, 4, trueDataLength - 4);//drop the first int
+        
+        rbuf.get(arr);//read the left things
+        data.put(arr, 4, trueDataLength - 4);//drop the first int
         //SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> rbuf -> "+
           //      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
         process();
@@ -281,6 +294,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       dataLengthBuffer.clear(); // Clean for the next call
       data = null; // For the GC
       this.callCleanup = null;
+      this.oldDataLength=0;
     }
   }
 
