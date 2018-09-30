@@ -144,14 +144,17 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         robinSize = size;
         realSenders = new CallSender[size];
         for(int i = 0; i < size; ++i) {
-            realSenders[i] = new CallSender(name, conf);
+            realSenders[i] = new CallSender(name, conf,i);
         }
     }
 
     public void sendCall(final Call call) throws IOException {
-        realSenders[call.hashCode()%robinSize].sendCall(call);
+      LOG.error("add a call to "+ call.hashCode()%robinSize);  
+      realSenders[call.hashCode()%robinSize].sendCall(call);
+
     }
     public void remove(Call call) {
+      LOG.error("remove a call from "+ call.hashCode()%robinSize);  
         realSenders[call.hashCode()%robinSize].remove(call);
     }
     public void run() {
@@ -268,14 +271,15 @@ private void writeRdmaRequest(Call call) throws IOException {
     LOG.warn("Error while writing RDMA call, call_id:" + call.id, t);
     return;
   }
-  notifyAll();
+  //
   readRdmaResponse();//waiting for the response
+  LOG.error("RDMA readRdmaResponse done");
 }
 private void readRdmaResponse() {
   Call call = null;
   boolean expectedCall = false;
   try {
-    LOG.info("RDMA readRdmaResponse waiting");
+    //LOG.error("RDMA readRdmaResponse waiting");
     ByteBuffer rbuf=this.rdmaconn.readResponse();
     if (rbuf==null) {
       LOG.info("RDMA readRdmaResponse lbs' bug");
@@ -355,12 +359,12 @@ private void readRdmaResponse() {
 
     private final int maxQueueSize;
 
-    public CallSender(String name, Configuration conf) {
+    public CallSender(String name, Configuration conf,int i) {
       int queueSize = conf.getInt("hbase.ipc.client.write.queueSize", 1000);
       callsToWrite = new ArrayDeque<>(queueSize);
       this.maxQueueSize = queueSize;
       setDaemon(true);
-      setName(name + " - writer");
+      setName(name + " - writer "+i);
     }
 
     public void sendCall(final Call call) throws IOException {
@@ -407,7 +411,10 @@ private void readRdmaResponse() {
           try {
             
             if((!useSasl)&&(rdmaPort==16021))
-            {  writeRdmaRequest(call);}
+            {  writeRdmaRequest(call);
+              //notifyAll();
+              continue;
+            }
 
             //for normal call
             tracedWriteRequest(call);
@@ -462,12 +469,12 @@ private void readRdmaResponse() {
         + remoteId.getAddress().toString()
         + ((ticket == null) ? " from an unknown user" : (" from " + ticket.getUserName()));
 
-    if (this.rpcClient.conf.getBoolean(BlockingRpcClient.SPECIFIC_WRITE_THREAD, false)) {
-      RobinCallSender = new RobinCallSender(threadName, this.rpcClient.conf,1);//debugging
+    //if (this.rpcClient.conf.getBoolean(BlockingRpcClient.SPECIFIC_WRITE_THREAD, false)) {
+      RobinCallSender = new RobinCallSender(threadName, this.rpcClient.conf,10);//debugging
       RobinCallSender.start();
-    } else {
-      RobinCallSender = null;
-    }
+    // } else {
+    //   RobinCallSender = null;
+    // }
     setupIOstreams();
   }
 
