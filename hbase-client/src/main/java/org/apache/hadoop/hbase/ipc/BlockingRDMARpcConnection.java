@@ -420,7 +420,7 @@ private void readRdmaResponse() {
             
             if((!useSasl)&&(rdmaPort==16021))
             {  writeRdmaRequest(call);
-              //notifyAll();
+              BlockingRDMARpcConnection.this.notifyAll();
               continue;
             }
 
@@ -478,7 +478,7 @@ private void readRdmaResponse() {
         + ((ticket == null) ? " from an unknown user" : (" from " + ticket.getUserName()));
 
     //if (this.rpcClient.conf.getBoolean(BlockingRpcClient.SPECIFIC_WRITE_THREAD, false)) {
-      RobinCallSender = new RobinCallSender(threadName, this.rpcClient.conf,10);//debugging
+      RobinCallSender = new RobinCallSender(threadName, this.rpcClient.conf,1);//debugging
       RobinCallSender.start();
     // } else {
     //   RobinCallSender = null;
