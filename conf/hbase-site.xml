@@ -81,7 +81,7 @@
     </property>
     <property>
         <name>hbase.rpc.client.impl</name>
-        <value>org.apache.hadoop.hbase.ipc.RpcClientImpl</value>
+        <value>org.apache.hadoop.hbase.ipc.BlockingRpcClient</value>
         <description>
             </description>
     </property>

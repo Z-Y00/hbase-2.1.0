@@ -46,6 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ThreadLocalRandom;
 import javax.security.sasl.SaslException;
+import  java.lang.Object;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
@@ -101,13 +102,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
   protected Socket socket = null;
   private DataInputStream in;
   private DataOutputStream out;
-  private DataInputStream rdma_in = null;
-  private DataOutputStream rdma_out = null ;
-  private ByteArrayOutputStream rdma_out_stream = null;
-  private static RdmaNative rdma = new RdmaNative();
-  //private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
-  //private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
-   private RdmaNative.RdmaClientConnection rdmaconn;
+
 
   public final int rdmaPort;
   private HBaseSaslRpcClient saslRpcClient;
@@ -115,7 +110,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
   // currently active calls
   private final ConcurrentMap<Integer, Call> calls = new ConcurrentHashMap<>();
 
-  private final CallSender callSender;
+  private final RobinCallSender RobinCallSender;
 
   private boolean closed = false;
 
@@ -154,28 +149,208 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     }
 
     public void sendCall(final Call call) throws IOException {
-        realSenders[Objects.hash(call)%robinSize].sendCall(call);
+        realSenders[call.hashCode()%robinSize].sendCall(call);
     }
     public void remove(Call call) {
-        realSenders[Objects.hash(call)%robinSize].remove(call);
+        realSenders[call.hashCode()%robinSize].remove(call);
     }
     public void run() {
-        for(int i = 0; i < size; ++i) {
+      try{
+        for(int i = 0; i < robinSize; ++i) {
             realSenders[i].start();
         }
-        for(int i = 0; i < size; ++i) {
+        for(int i = 0; i < robinSize; ++i) {
             realSenders[i].join();
         }
+      }catch(InterruptedException e ){
+        LOG.warn("InterruptedException in RobinCallSender");
+      }
     }
     public void cleanup(IOException e) {
         // TODO: Can I do this?
-        for(int i = 0; i < size; ++i) {
+        for(int i = 0; i < robinSize; ++i) {
             realSenders[i].cleanup(e);
         }
     }
   }
   private class CallSender extends Thread {
 
+    private DataInputStream rdma_in = null;
+    private DataOutputStream rdma_out = null ;
+    private ByteArrayOutputStream rdma_out_stream = null;
+    private  RdmaNative rdma = new RdmaNative();
+    //private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
+    //private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
+     private RdmaNative.RdmaClientConnection rdmaconn;
+
+     private void setupRdmaIOstreams() throws IOException {
+
+      if(this.rdmaconn!=null){
+      //if(this.rdmaconn.ifInit()){//this is already set
+
+        //LOG.error("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
+          ////this.rdma_out.close();
+        this.rdma_out_stream.reset();//clear the underlying one.
+        return ;
+      //}
+      //LOG.error("get a rdmaconn, not inited!!!");
+
+     }
+  //LOG.debug("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
+
+    do this.rdmaconn=rdma.rdmaConnect(remoteId.address.toString(),rdmaPort);
+    while (this.rdmaconn==null);  
+
+
+  this.rdma_out_stream = new ByteArrayOutputStream();
+  this.rdma_out = new DataOutputStream(this.rdma_out_stream);
+
+
+  try {
+      // Now write out the connection header//
+      // this will init the servie and usr ugi
+    rdma_out.write(connectionHeaderWithLength);// essential connectionHeaderRead
+    this.rdmaconn.init();
+
+  } catch (Throwable t) {
+    LOG.warn("Error in RDMA setupRDMAIOstream");
+  }
+
+  // start the receiver thread after the socket connection has been set up
+  thread = new Thread(this, threadName);
+  thread.setDaemon(true);
+  thread.start();
+}
+private void writeRdmaRequest(Call call) throws IOException {
+  //LOG.debug("RDMA writeRdmaRequest hooked what should go to "+remoteId.getAddress());
+  ByteBuffer cellBlock = rpcClient.cellBlockBuilder.buildCellBlock(codec,
+    compressor, call.cells);
+  CellBlockMeta cellBlockMeta;
+  if (cellBlock != null) {
+    cellBlockMeta = CellBlockMeta.newBuilder().setLength(cellBlock.limit()).build();
+  } else {
+    cellBlockMeta = null;
+  }
+  RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
+  
+
+
+  setupRdmaIOstreams();
+
+  // Now we're going to write the call. We take the lock, then check that the connection
+  // is still valid, and, if so we do the write to the socket. If the write fails, we don't
+  // know where we stand, we have to close the connection.
+  if (Thread.interrupted()) {
+    throw new InterruptedIOException();
+  }
+
+  calls.put(call.id, call); // We put first as we don't want the connection to become idle.
+  // from here, we do not throw any exception to upper layer as the call has been tracked in the
+  // pending calls map.  
+  try {
+    call.callStats.setRequestSizeBytes(write(this.rdma_out, requestHeader, call.param, cellBlock));
+    
+    byte[] sbuf=this.rdma_out_stream.toByteArray();
+    //LOG.trace("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
+    //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
+    //allocate direct buf
+    ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
+    ByteBuffer tmp = ByteBuffer.wrap(sbuf);
+    directbuf.put(tmp);
+    if(!rdmaconn.writeQuery(directbuf))
+    LOG.error("RDMA writeQuery failed");
+
+    //LOG.trace("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
+    //StandardCharsets.UTF_8.decode(directbuf).toString());
+    //rdmaconn.close();//close the one have problem, get a new
+    //return;
+  } catch (Throwable t) {
+    LOG.warn("Error while writing RDMA call, call_id:" + call.id, t);
+    return;
+  }
+  notifyAll();
+  readRdmaResponse();//waiting for the response
+}
+private void readRdmaResponse() {
+  Call call = null;
+  boolean expectedCall = false;
+  try {
+    LOG.info("RDMA readRdmaResponse waiting");
+    ByteBuffer rbuf=this.rdmaconn.readResponse();
+    if (rbuf==null) {
+      LOG.info("RDMA readRdmaResponse lbs' bug");
+    }
+    int length = rbuf.remaining();
+    LOG.info("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
+    rbuf.rewind();
+    byte[] arr = new byte[length];
+    rbuf.get(arr);
+    rdma_in=new DataInputStream(new ByteArrayInputStream(arr));
+    int totalSize;
+    do {
+       // See HBaseServer.Call.setResponse for where we write out the response.
+    // Total size of the response. Unused. But have to read it in anyways.
+    totalSize = rdma_in.readInt();
+    //LOG.trace("RDMA get rbuf totalSize "+totalSize);
+    // Read the header
+    ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(rdma_in);
+    int id = responseHeader.getCallId();
+    call = calls.remove(id); // call.done have to be set before leaving this method
+    //LOG.trace("RDMA remove call");
+    expectedCall = (call != null && !call.isDone());
+    if (!expectedCall) {
+      //LOG.trace("RDMA !expectedCall");
+      // So we got a response for which we have no corresponding 'call' here on the client-side.
+      // We probably timed out waiting, cleaned up all references, and now the server decides
+      // to return a response. There is nothing we can do w/ the response at this stage. Clean
+      // out the wire of the response so its out of the way and we can get other responses on
+      // this connection.
+      int readSoFar = getTotalSizeWhenWrittenDelimited(responseHeader);
+      int whatIsLeftToRead = totalSize - readSoFar;
+      IOUtils.skipFully(rdma_in, whatIsLeftToRead);
+      if (call != null) {
+        call.callStats.setResponseSizeBytes(totalSize);
+      }
+      return;
+    }
+    if (responseHeader.hasException()) {
+      //LOG.trace("RDMA hasException! ");
+      ExceptionResponse exceptionResponse = responseHeader.getException();
+      RemoteException re = createRemoteException(exceptionResponse);
+      call.setException(re);
+      call.callStats.setResponseSizeBytes(totalSize);
+    } else {
+      //LOG.trace("RDMA noException! ");
+      Message value = null;
+      if (call.responseDefaultType != null) {
+        Builder builder = call.responseDefaultType.newBuilderForType();
+        ProtobufUtil.mergeDelimitedFrom(builder, rdma_in);
+        value = builder.build();
+      }
+      CellScanner cellBlockScanner = null;
+      if (responseHeader.hasCellBlockMeta()) {
+        int size = responseHeader.getCellBlockMeta().getLength();
+        byte[] cellBlock = new byte[size];
+
+          IOUtils.readFully(this.rdma_in, cellBlock, 0, cellBlock.length);
+        
+        cellBlockScanner = rpcClient.cellBlockBuilder.createCellScanner(codec,
+          compressor, cellBlock);
+      }
+      call.setResponse(value, cellBlockScanner);
+      call.callStats.setResponseSizeBytes(totalSize);
+    }
+      
+    } while (length > totalSize );
+   
+    //LOG.trace("RDMA  readRdmaResponse! done");
+    
+  } catch (IOException e){
+    if (expectedCall) {
+      call.setException(e);
+    }
+  }
+}
     private final Queue<Call> callsToWrite;
 
     private final int maxQueueSize;
@@ -230,7 +405,13 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
             continue;
           }
           try {
+            
+            if((!useSasl)&&(rdmaPort==16021))
+            {  writeRdmaRequest(call);}
+
+            //for normal call
             tracedWriteRequest(call);
+
           } catch (IOException e) {
             // exception here means the call has not been added to the pendingCalls yet, so we need
             // to fail it by our own.
@@ -282,10 +463,10 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         + ((ticket == null) ? " from an unknown user" : (" from " + ticket.getUserName()));
 
     if (this.rpcClient.conf.getBoolean(BlockingRpcClient.SPECIFIC_WRITE_THREAD, false)) {
-      callSender = new CallSender(threadName, this.rpcClient.conf);
-      callSender.start();
+      RobinCallSender = new RobinCallSender(threadName, this.rpcClient.conf,1);//debugging
+      RobinCallSender.start();
     } else {
-      callSender = null;
+      RobinCallSender = null;
     }
     setupIOstreams();
   }
@@ -566,44 +747,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     thread.setDaemon(true);
     thread.start();
   }
-  private void setupRdmaIOstreams() throws IOException {
 
-        if(this.rdmaconn!=null){
-        //if(this.rdmaconn.ifInit()){//this is already set
-
-          //LOG.error("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
-            ////this.rdma_out.close();
-          this.rdma_out_stream.reset();//clear the underlying one.
-          return ;
-        //}
-        //LOG.error("get a rdmaconn, not inited!!!");
-
-       }
-    //LOG.debug("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
-
-      do this.rdmaconn=rdma.rdmaConnect(remoteId.address.toString(),this.rdmaPort);
-      while (this.rdmaconn==null);  
-
-
-    this.rdma_out_stream = new ByteArrayOutputStream();
-    this.rdma_out = new DataOutputStream(this.rdma_out_stream);
-
-
-    try {
-        // Now write out the connection header//
-        // this will init the servie and usr ugi
-      rdma_out.write(connectionHeaderWithLength);// essential connectionHeaderRead
-      this.rdmaconn.init();
-
-    } catch (Throwable t) {
-      LOG.warn("Error in RDMA setupRDMAIOstream");
-    }
-
-    // start the receiver thread after the socket connection has been set up
-    thread = new Thread(this, threadName);
-    thread.setDaemon(true);
-    thread.start();
-  }
 
   /**
    * Write the RPC header: {@code <MAGIC WORD -- 'HBas'> <ONEBYTE_VERSION> <ONEBYTE_AUTH_TYPE>}
@@ -687,8 +831,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       if((!useSasl)&&(rdmaPort==16021))
         {
           //LOG.debug("RDMA get a call with callMd "+ callMd);
-        writeRdmaRequest(call);}
-        //writeRequest(call);}//debugging
+        //writeRdmaRequest(call);}
+        writeRequest(call);}//debugging
       else
       {//LOG.debug("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
         writeRequest(call);}
@@ -735,56 +879,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     }
     notifyAll();
   }
-  private void writeRdmaRequest(Call call) throws IOException {
-    //LOG.debug("RDMA writeRdmaRequest hooked what should go to "+remoteId.getAddress());
-    ByteBuffer cellBlock = this.rpcClient.cellBlockBuilder.buildCellBlock(this.codec,
-      this.compressor, call.cells);
-    CellBlockMeta cellBlockMeta;
-    if (cellBlock != null) {
-      cellBlockMeta = CellBlockMeta.newBuilder().setLength(cellBlock.limit()).build();
-    } else {
-      cellBlockMeta = null;
-    }
-    RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
-    
 
-
-    setupRdmaIOstreams();
-
-    // Now we're going to write the call. We take the lock, then check that the connection
-    // is still valid, and, if so we do the write to the socket. If the write fails, we don't
-    // know where we stand, we have to close the connection.
-    if (Thread.interrupted()) {
-      throw new InterruptedIOException();
-    }
-
-    calls.put(call.id, call); // We put first as we don't want the connection to become idle.
-    // from here, we do not throw any exception to upper layer as the call has been tracked in the
-    // pending calls map.  
-    try {
-      call.callStats.setRequestSizeBytes(write(this.rdma_out, requestHeader, call.param, cellBlock));
-      
-      byte[] sbuf=this.rdma_out_stream.toByteArray();
-      //LOG.trace("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
-      //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
-      //allocate direct buf
-      ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
-      ByteBuffer tmp = ByteBuffer.wrap(sbuf);
-      directbuf.put(tmp);
-      if(!rdmaconn.writeQuery(directbuf))
-      LOG.error("RDMA writeQuery failed");
-
-      //LOG.trace("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
-      //StandardCharsets.UTF_8.decode(directbuf).toString());
-      //rdmaconn.close();//close the one have problem, get a new
-      //return;
-    } catch (Throwable t) {
-      LOG.warn("Error while writing RDMA call, call_id:" + call.id, t);
-      return;
-    }
-    notifyAll();
-    readRdmaResponse();//waiting for the response
-  }
   /*
    * Receive a response. Because only one receiver, so no synchronization on in.
    */
@@ -872,86 +967,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       }
     }
   }
-  private void readRdmaResponse() {
-    Call call = null;
-    boolean expectedCall = false;
-    try {
-      LOG.info("RDMA readRdmaResponse waiting");
-      ByteBuffer rbuf=this.rdmaconn.readResponse();
-      if (rbuf==null) {
-        LOG.info("RDMA readRdmaResponse lbs' bug");
-      }
-      int length = rbuf.remaining();
-      LOG.info("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
-      rbuf.rewind();
-      byte[] arr = new byte[length];
-      rbuf.get(arr);
-      rdma_in=new DataInputStream(new ByteArrayInputStream(arr));
-      int totalSize;
-      do {
-         // See HBaseServer.Call.setResponse for where we write out the response.
-      // Total size of the response. Unused. But have to read it in anyways.
-      totalSize = rdma_in.readInt();
-      //LOG.trace("RDMA get rbuf totalSize "+totalSize);
-      // Read the header
-      ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(rdma_in);
-      int id = responseHeader.getCallId();
-      call = calls.remove(id); // call.done have to be set before leaving this method
-      //LOG.trace("RDMA remove call");
-      expectedCall = (call != null && !call.isDone());
-      if (!expectedCall) {
-        //LOG.trace("RDMA !expectedCall");
-        // So we got a response for which we have no corresponding 'call' here on the client-side.
-        // We probably timed out waiting, cleaned up all references, and now the server decides
-        // to return a response. There is nothing we can do w/ the response at this stage. Clean
-        // out the wire of the response so its out of the way and we can get other responses on
-        // this connection.
-        int readSoFar = getTotalSizeWhenWrittenDelimited(responseHeader);
-        int whatIsLeftToRead = totalSize - readSoFar;
-        IOUtils.skipFully(rdma_in, whatIsLeftToRead);
-        if (call != null) {
-          call.callStats.setResponseSizeBytes(totalSize);
-        }
-        return;
-      }
-      if (responseHeader.hasException()) {
-        //LOG.trace("RDMA hasException! ");
-        ExceptionResponse exceptionResponse = responseHeader.getException();
-        RemoteException re = createRemoteException(exceptionResponse);
-        call.setException(re);
-        call.callStats.setResponseSizeBytes(totalSize);
-      } else {
-        //LOG.trace("RDMA noException! ");
-        Message value = null;
-        if (call.responseDefaultType != null) {
-          Builder builder = call.responseDefaultType.newBuilderForType();
-          ProtobufUtil.mergeDelimitedFrom(builder, rdma_in);
-          value = builder.build();
-        }
-        CellScanner cellBlockScanner = null;
-        if (responseHeader.hasCellBlockMeta()) {
-          int size = responseHeader.getCellBlockMeta().getLength();
-          byte[] cellBlock = new byte[size];
 
-            IOUtils.readFully(this.rdma_in, cellBlock, 0, cellBlock.length);
-          
-          cellBlockScanner = this.rpcClient.cellBlockBuilder.createCellScanner(this.codec,
-            this.compressor, cellBlock);
-        }
-        call.setResponse(value, cellBlockScanner);
-        call.callStats.setResponseSizeBytes(totalSize);
-      }
-        
-      } while (length > totalSize );
-     
-      //LOG.trace("RDMA  readRdmaResponse! done");
-      
-    } catch (IOException e){
-      if (expectedCall) {
-        call.setException(e);
-      }
-    }
-  }
 
   @Override
   protected synchronized void callTimeout(Call call) {
@@ -977,8 +993,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     thread.interrupt();
     thread = null;
     closeSocket();
-    if (callSender != null) {
-      callSender.cleanup(e);
+    if (RobinCallSender != null) {
+      RobinCallSender.cleanup(e);
     }
     for (Call call : calls.values()) {
       call.setException(e);
@@ -990,8 +1006,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
   @Override
   public synchronized void shutdown() {
     closed = true;
-    if (callSender != null) {
-      callSender.interrupt();
+    if (RobinCallSender != null) {
+      RobinCallSender.interrupt();
     }
     closeConn(new IOException("connection to " + remoteId.address + " closed"));
   }
@@ -1010,8 +1026,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       public void run(Object parameter) {
         setCancelled(call);
         synchronized (BlockingRDMARpcConnection.this) {
-          if (callSender != null) {
-            callSender.remove(call);
+          if (RobinCallSender != null) {
+            RobinCallSender.remove(call);
           } else {
             calls.remove(call.id);
           }
@@ -1026,8 +1042,8 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
           return;
         }
         scheduleTimeoutTask(call);
-        if (callSender != null) {
-          callSender.sendCall(call);
+        if (RobinCallSender != null) {
+          RobinCallSender.sendCall(call);
         } else {
           tracedWriteRequest(call);
         }
