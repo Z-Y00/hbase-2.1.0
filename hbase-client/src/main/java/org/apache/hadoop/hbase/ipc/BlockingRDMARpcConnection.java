@@ -142,6 +142,38 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
    * received.
    * </p>
    */
+  private class RobinCallSender extends Thread {
+    private final CallSender realSenders[]; // create an array here
+    private final int robinSize;
+    public RobinCallSender(String name, Configuration conf, int size) {
+        robinSize = size;
+        realSenders = new CallSender[size];
+        for(int i = 0; i < size; ++i) {
+            realSenders[i] = new CallSender(name, conf);
+        }
+    }
+
+    public void sendCall(final Call call) throws IOException {
+        realSenders[Objects.hash(call)%robinSize].sendCall(call);
+    }
+    public void remove(Call call) {
+        realSenders[Objects.hash(call)%robinSize].remove(call);
+    }
+    public void run() {
+        for(int i = 0; i < size; ++i) {
+            realSenders[i].start();
+        }
+        for(int i = 0; i < size; ++i) {
+            realSenders[i].join();
+        }
+    }
+    public void cleanup(IOException e) {
+        // TODO: Can I do this?
+        for(int i = 0; i < size; ++i) {
+            realSenders[i].cleanup(e);
+        }
+    }
+  }
   private class CallSender extends Thread {
 
     private final Queue<Call> callsToWrite;
