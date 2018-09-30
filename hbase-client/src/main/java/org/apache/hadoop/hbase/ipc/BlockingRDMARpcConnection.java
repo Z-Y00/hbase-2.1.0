@@ -151,12 +151,19 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
 
     public void sendCall(final Call call) throws IOException {
       //LOG.error("add a call to "+ call.hashCode()%robinSize);  
-      realSenders[call.hashCode()%robinSize].sendCall(call);
+      realSenders[call.id%robinSize].sendCall(call);
 
+    }
+    public void shutdown() {
+      this.stop();
+      for(int i = 0; i < robinSize; ++i) {
+        realSenders[i].interrupt();
+    }
+    
     }
     public void remove(Call call) {
       //LOG.error("remove a call from "+ call.hashCode()%robinSize);  
-        realSenders[call.hashCode()%robinSize].remove(call);
+        realSenders[call.id%robinSize].remove(call);
     }
     public void run() {
       try{
@@ -1002,7 +1009,9 @@ private void readRdmaResponse() {
     thread = null;
     closeSocket();
     if (RobinCallSender != null) {
-      RobinCallSender.cleanup(e);
+      LOG.error("closeConn !");
+      //RobinCallSender.cleanup(e);
+      RobinCallSender.shutdown();
     }
     for (Call call : calls.values()) {
       call.setException(e);
@@ -1016,7 +1025,8 @@ private void readRdmaResponse() {
     closed = true;
     LOG.error("shutdown !");
     if (RobinCallSender != null) {
-    
+      RobinCallSender.shutdown();
+      
         LOG.error("shutdown now !");
   
       
