@@ -20,5 +20,105 @@
  * limitations under the License.
  */
 -->
+
 <configuration>
+<!--    <property>
+        <name>hbase.zookeeper.dns.interface</name>
+        <value>ib0</value>
+        <description>The name of the Network Interface from which a ZooKeeper
+            server
+            should report its IP address.
+        </description>
+</property>-->
+
+<!--<property>
+    <name>hbase.regionserver.dns.interface</name>
+    <value>ib0</value>
+    <description>The name of the Network Interface from which a ZooKeeper
+        server
+        should report its IP address.
+    </description>
+</property>-->
+<!--<property>
+    <name>hbase.master.dns.interface</name>
+    <value>ib0</value>
+    <description>The name of the Network Interface from which a ZooKeeper
+        server
+        should report its IP address.
+    </description>
+</property>-->
+<property>
+    <name>hbase.master.hostname</name>
+    <value>inode111</value>
+</property>
+<property>
+    <name>hbase.regionserver.hostname</name>
+    <value>inode112</value>
+</property>
+<property>
+    <name>hbase.master.port</name>
+    <value>16000</value>
+    <description>the client will do a rpc
+    </description>
+</property>
+
+<property>
+        <name>hbase.master</name>
+        <value>inode111:16000</value>
+        <description>The host and port that the HBase
+            master runs at.
+            A value of ‘local’ runs the
+            master and a regionserver
+            in a single process.
+        </description>
+    </property>
+    <property>
+        <name>hbase.rootdir</name>
+        <!--<value>hdfs://inode111:9000/hbase</value>-->
+        <value>file:///home/rdma_match/data/hbase</value>
+        <description>The directory shared by region
+            servers.</description>
+    </property>
+    <property>
+        <name>hbase.rpc.client.impl</name>
+        <value>org.apache.hadoop.hbase.ipc.BlockingRpcClient</value>
+        <description>
+            </description>
+    </property>
+    <property>
+        <name>hbase.rpc.server.impl</name>
+        <value>org.apache.hadoop.hbase.ipc.SimpleRpcServer</value>
+        <description>
+        </description>
+    </property>
+    <property>
+        <name>hbase.cluster.distributed</name>
+        <value>true</value>
+        <description>The mode the cluster will be in.
+            Possible values are   false:
+            standalone and
+pseudo-distributed setups  with managed
+            Zookeeper true: fully-distributed with unmanaged
+            Zookeeper
+            Quorum (see hbase-env.sh)
+        </description>
+    </property>
+    <property>
+        <name>hbase.zookeeper.property.dataDir</name>
+        <value>/home/rdma_match/data/zookeeper</value>
+    </property>
+    <property>
+        <name>hbase.zookeeper.property.clientPort</name>
+        <value>2222</value>
+        <description>Property from ZooKeeper’s config
+            zoo.cfg.
+            The port at which the clients will connect.
+        </description>
+    </property>
+    <property>
+        <name>hbase.zookeeper.quorum</name>
+        <value>inode112</value>
+        <description>Co
+                </description>
+                </property>
 </configuration>

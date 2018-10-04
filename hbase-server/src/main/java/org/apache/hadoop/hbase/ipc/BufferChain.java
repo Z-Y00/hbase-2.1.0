@@ -58,6 +58,24 @@ class BufferChain {
     }
     return bytes;
   }
+  
+  //concat with end of stream at each 
+  ByteBuffer concat() {
+    int length = 0;
+    for (ByteBuffer bb : buffers) {
+      bb.rewind();
+      length += bb.remaining();
+    }
+    ByteBuffer bbNew = ByteBuffer.allocateDirect((int) length);
+
+    // put all buffers from list
+    for (ByteBuffer bb : buffers) {
+      bb.rewind();
+      bbNew.put(bb);
+    }
+    bbNew.rewind();
+    return bbNew;
+  }
 
   boolean hasRemaining() {
     return remaining > 0;

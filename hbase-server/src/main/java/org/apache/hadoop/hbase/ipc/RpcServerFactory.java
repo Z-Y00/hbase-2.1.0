@@ -54,7 +54,8 @@ public class RpcServerFactory {
       final InetSocketAddress bindAddress, Configuration conf,
       RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
     String rpcServerClass = conf.get(CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
-        NettyRpcServer.class.getName());
+        //NettyRpcServer.class.getName());
+        SimpleRpcServer.class.getName()); // recolic: use simple rpc.
     StringBuilder servicesList = new StringBuilder();
     for (BlockingServiceAndInterface s: services) {
       ServiceDescriptor sd = s.getBlockingService().getDescriptorForType();

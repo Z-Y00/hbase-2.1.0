@@ -41,6 +41,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 
+//import com.oracle.tools.packager.Log;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -83,10 +84,16 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  */
 @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
 public class SimpleRpcServer extends RpcServer {
+  private  RdmaNative rdma =null;
+
+      //TODO isRdma get from conf
+      
 
   protected int port;                             // port we listen on
+  protected int rdmaPort;//rdma listener port
   protected InetSocketAddress address;            // inet address we listen on
   private int readThreads;                        // number of read threads
+
 
   protected int socketSendBufferSize;
   protected final long purgeTimeout;    // in milliseconds
@@ -94,8 +101,12 @@ public class SimpleRpcServer extends RpcServer {
   // maintains the set of client connections and handles idle timeouts
   private ConnectionManager connectionManager;
   private Listener listener = null;
+  private RdmaListener rdmalistener = null;
   protected SimpleRpcServerResponder responder = null;
 
+  // public String getHostAddr(){
+  //   return listener.acceptChannel.hostAddress;
+  // }
   /** Listens on the socket. Creates jobs for the handler threads*/
   private class Listener extends Thread {
 
@@ -106,6 +117,7 @@ public class SimpleRpcServer extends RpcServer {
     private final int readerPendingConnectionQueueLength;
 
     private ExecutorService readPool;
+
 
     public Listener(final String name) throws IOException {
       super(name);
@@ -185,6 +197,7 @@ public class SimpleRpcServer extends RpcServer {
               iter.remove();
               if (key.isValid()) {
                 if (key.isReadable()) {
+                  //LOG.warn("normal reader doread");
                   doRead(key);
                 }
               }
@@ -364,6 +377,150 @@ public class SimpleRpcServer extends RpcServer {
       return readers[currentReader];
     }
   }
+  private class RdmaListener extends Thread {
+
+    private Reader[] readers = null;
+    private int currentReader = 0;
+    private final int readerPendingConnectionQueueLength;
+
+    private ExecutorService readPool;
+
+    public RdmaListener(final String name, final int rdmaport) throws IOException {
+      super(name);
+      
+      // The backlog of requests that we will have the serversocket carry.
+      int backlogLength = conf.getInt("hbase.ipc.server.listen.queue.size", 128);
+      readerPendingConnectionQueueLength =
+          conf.getInt("hbase.ipc.server.read.connection-queue.size", 100);
+      // Create a new server socket and set to non blocking mode
+
+      if(port!=16020){//only for regionserver
+        LOG.info("drop for the not regionserver"+name);
+        return;
+      }
+      //LOG.warn("Server Loading the rdmalib");
+      rdma= new RdmaNative();
+      //LOG.warn("Server bind! the rdmalib");
+      rdma.rdmaBind(rdmaport);
+
+      readers = new Reader[readThreads];
+      // Why this executor thing? Why not like hadoop just start up all the threads? I suppose it
+      // has an advantage in that it is easy to shutdown the pool.
+      readPool = Executors.newFixedThreadPool(readThreads,
+        new ThreadFactoryBuilder().setNameFormat(
+          "Reader=%d,bindAddress=" + bindAddress.getHostName() +
+          ",port=" + port).setDaemon(true)
+        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+      for (int i = 0; i < readThreads; ++i) {
+        Reader reader = new Reader();
+        readers[i] = reader;
+        readPool.execute(reader);
+      }
+      LOG.info("rdmaListener: started " + readThreads + " reader(s) listening on port=" + rdmaPort);
+
+      // Register accepts on the server socket with the selector.
+      //acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
+      this.setName("RdmaListener,port=" + rdmaPort);
+      this.setDaemon(true);
+    }
+
+
+    private class Reader implements Runnable {
+      final private LinkedBlockingQueue<SimpleServerRdmaRpcConnection> pendingConnections;
+      //private final Selector readSelector;
+
+      Reader() throws IOException {
+        this.pendingConnections = new LinkedBlockingQueue<>(readerPendingConnectionQueueLength);
+        //this.readSelector = Selector.open();
+      }
+
+      @Override
+      public void run() {
+        SimpleRpcServer.LOG.info("RDMA reader starting");
+          doRunLoop();
+      }
+
+      private synchronized void doRunLoop() {
+        while (running) {
+          try {
+            //LOG.warn("RDMA reader running");
+            Iterator<SimpleServerRdmaRpcConnection> iter = pendingConnections.iterator();
+            while (iter.hasNext()) {
+              //LOG.warn("RDMA reader running");
+              SimpleServerRdmaRpcConnection  rdma_conn= iter.next();
+                if (rdma_conn.isReadable()) {
+                  doRead(rdma_conn);
+                  //closeRdmaConnection(rdma_conn);
+                  //iter.remove();//just close it
+                }
+            }
+          } catch (InterruptedException e) {
+            if (running) {                      // unexpected -- log it
+              LOG.info(Thread.currentThread().getName() + " unexpectedly interrupted RDMA", e);
+            }
+          } catch (CancelledKeyException e) {
+            LOG.error(getName() + ": CancelledKeyException in RDMA Reader", e);
+          } 
+        }
+      }
+      void doRead(SimpleServerRdmaRpcConnection c) throws InterruptedException {
+        //SimpleRpcServer.LOG.warn("RDMA  reader doRead");
+        int count;
+        if (c == null) {
+          return;
+        }
+        c.setLastContact(System.currentTimeMillis());
+        try {
+          count = c.readAndProcess();
+        } catch (InterruptedException ieo) {
+          LOG.info(Thread.currentThread().getName() + ": RDMA readAndProcess caught InterruptedException", ieo);
+          throw ieo;
+        } catch (Exception e) {
+          if (LOG.isDebugEnabled()) {
+            LOG.debug("Caught exception while readAndProcess RDMA:", e);
+          }
+          count = -1; //so that the (count < 0) block is executed
+        }
+        if (count < 0) {
+          closeRdmaConnection(c);
+          c = null;
+        } else {
+          c.setLastContact(System.currentTimeMillis());
+        }
+      }
+
+    }
+
+    @Override
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
+      justification="selector access is not synchronized; seems fine but concerned changing " +
+        "it will have per impact")
+    public void run() {
+      SimpleRpcServer.LOG.info("RDMA listener start and bind at port "+ rdmaPort+" this rpcserver is at port "+port);
+      int i=1;
+      while (running) {
+        SimpleServerRdmaRpcConnection rdma_conn=getRdmaConnection(rdmaPort,System.currentTimeMillis());
+        this.readers[i].pendingConnections.add(rdma_conn);
+      SimpleRpcServer.LOG.info("RDMA listener add a conn to reader "+ i);
+      //   synchronized (this.readers[i].lock) {  should we add a lock????
+      //     this.readers[i].lock.notify();
+      // }
+      i++;
+      i = i % readThreads ;//add in a round robin way  
+
+      }
+      LOG.info(getName() + ": stopping");
+      doStop();      
+    }
+
+
+    synchronized void doStop() {
+      SimpleRpcServer.LOG.warn("RDMA listener doStop");
+      readPool.shutdownNow();
+    }
+
+
+  }
 
   /**
    * Constructs a server listening on the named port and address.
@@ -389,10 +546,15 @@ public class SimpleRpcServer extends RpcServer {
     // Start the listener here and let it bind to the port
     listener = new Listener(name);
     this.port = listener.getAddress().getPort();
+    if(this.port==16020){
+      this.rdmaPort=port+1;
+        rdmalistener = new RdmaListener(name, rdmaPort);
+      
+    }
 
     // Create the responder here
     responder = new SimpleRpcServerResponder(this);
-    connectionManager = new ConnectionManager();
+    connectionManager = new ConnectionManager(); 
     initReconfigurable(conf);
 
     this.scheduler.init(new RpcSchedulerContext(this));
@@ -405,9 +567,18 @@ public class SimpleRpcServer extends RpcServer {
   protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
     return new SimpleServerRpcConnection(this, channel, time);
   }
-
+  protected SimpleServerRdmaRpcConnection getRdmaConnection(int port, long time) {
+    return new SimpleServerRdmaRpcConnection(this,port, time);
+  }
   protected void closeConnection(SimpleServerRpcConnection connection) {
-    connectionManager.close(connection);
+    connectionManager.close(connection); 
+  }
+
+  protected static void closeRdmaConnection(SimpleServerRdmaRpcConnection connection) {
+    if(!connection.rdmaconn.close())
+    {
+      LOG.warn("RDMA close failed L583");
+    }
   }
 
   /** Sets the socket buffer size used for responding to RPCs.
@@ -429,6 +600,10 @@ public class SimpleRpcServer extends RpcServer {
     HBasePolicyProvider.init(conf, authManager);
     responder.start();
     listener.start();
+    if(this.port==16020){
+      rdmalistener.start();
+    }
+    
     scheduler.start();
     started = true;
   }
@@ -444,6 +619,8 @@ public class SimpleRpcServer extends RpcServer {
     }
     listener.interrupt();
     listener.doStop();
+    rdmalistener.interrupt();
+    rdmalistener.doStop();
     responder.interrupt();
     scheduler.stop();
     notifyAll();
@@ -488,7 +665,7 @@ public class SimpleRpcServer extends RpcServer {
       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
       long startTime, int timeout) throws IOException {
     SimpleServerCall fakeCall = new SimpleServerCall(-1, service, md, null, param, cellScanner,
-        null, -1, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, null);
+        null, -1, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, responder);
     return call(fakeCall, status);
   }
 

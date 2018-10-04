@@ -47,8 +47,8 @@ public final class RpcClientFactory {
 
   /** Helper method for tests only. Creates an {@code RpcClient} without metrics. */
   @VisibleForTesting
-  public static RpcClient createClient(Configuration conf, String clusterId) {
-    return createClient(conf, clusterId, null);
+  public static RpcClient createClient(Configuration conf, String clusterId,boolean isRdma) {
+    return createClient(conf, clusterId, null,isRdma);
   }
 
   /**
@@ -60,33 +60,40 @@ public final class RpcClientFactory {
    * @return newly created RpcClient
    */
   public static RpcClient createClient(Configuration conf, String clusterId,
-      MetricsConnection metrics) {
-    return createClient(conf, clusterId, null, metrics);
+      MetricsConnection metrics,boolean isRdma) {
+    return createClient(conf, clusterId, null, metrics,isRdma);
   }
 
   private static String getRpcClientClass(Configuration conf) {
     String rpcClientClass = conf.get(CUSTOM_RPC_CLIENT_IMPL_CONF_KEY);
     if (rpcClientClass == null) {
-      return NettyRpcClient.class.getName();
+      // return NettyRpcClient.class.getName();
+      return BlockingRpcClient.class.getName(); // recolic: use simple rpc cli
     }
     String mappedName = DEPRECATED_NAME_MAPPING.get(rpcClientClass);
     return mappedName == null ? rpcClientClass : mappedName;
   }
 
-  /**
-   * Creates a new RpcClient by the class defined in the configuration or falls back to
-   * RpcClientImpl
-   * @param conf configuration
-   * @param clusterId the cluster id
-   * @param localAddr client socket bind address.
-   * @param metrics the connection metrics
-   * @return newly created RpcClient
-   */
-  public static RpcClient createClient(Configuration conf, String clusterId,
-      SocketAddress localAddr, MetricsConnection metrics) {
-    String rpcClientClass = getRpcClientClass(conf);
-    return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
-        Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
-      new Object[] { conf, clusterId, localAddr, metrics });
-  }
+
+private static String getRDMARpcClientClass(Configuration conf) {
+    return BlockingRDMARpcClient.class.getName(); // recolic: use simple rpc cli
+}
+
+/**
+ * Creates a new RpcClient by the class defined in the configuration or falls back to
+ * RpcClientImpl
+ * @param conf configuration
+ * @param clusterId the cluster id
+ * @param localAddr client socket bind address.
+ * @param metrics the connection metrics
+ * @return newly created RpcClient
+ */
+public static RpcClient createClient(Configuration conf, String clusterId,
+    SocketAddress localAddr, MetricsConnection metrics,boolean isRdma) {
+      //String rpcClientClass = getRDMARpcClientClass(conf);
+  String rpcClientClass = isRdma?getRDMARpcClientClass(conf):getRpcClientClass(conf);
+  return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
+      Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
+    new Object[] { conf, clusterId, localAddr, metrics });
+}
 }

@@ -138,7 +138,8 @@ public final class ConnectionUtils {
         ServerName serverName, AdminService.BlockingInterface admin,
         ClientService.BlockingInterface client)
     throws IOException {
-      super(conf, pool, user);
+      
+      super(conf, pool, user,false);// rdma
       this.serverName = serverName;
       this.localHostAdmin = admin;
       this.localHostClient = client;
