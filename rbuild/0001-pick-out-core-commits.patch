@@ -1,0 +1,3080 @@
+From 9eae727c1bd70e3b2ddd666cfbd28631baf82d95 Mon Sep 17 00:00:00 2001
+From: GengYu Rao <zouyoo@outlook.com>
+Date: Fri, 5 Oct 2018 00:38:51 +0800
+Subject: [PATCH] pick out core commits
+
+---
+ .gitignore                                    |    9 +
+ conf/hbase-site.xml                           |  100 ++
+ conf/log4j.properties                         |   36 +-
+ conf/regionservers                            |    2 +-
+ .../hbase/client/AsyncConnectionImpl.java     |    2 +-
+ .../client/ConnectionImplementation.java      |   99 +-
+ .../hadoop/hbase/client/ConnectionUtils.java  |    3 +-
+ .../hbase/ipc/BlockingRDMARpcCallback.java    |   71 ++
+ .../hbase/ipc/BlockingRDMARpcClient.java      |   78 ++
+ .../hbase/ipc/BlockingRDMARpcConnection.java  | 1080 +++++++++++++++++
+ .../hbase/ipc/BlockingRpcConnection.java      |    7 +-
+ .../hadoop/hbase/ipc/RdmaConnectionPool.java  |  112 ++
+ .../apache/hadoop/hbase/ipc/RdmaNative.java   |  118 ++
+ .../hadoop/hbase/ipc/RpcClientFactory.java    |   49 +-
+ .../apache/hadoop/hbase/ipc/BufferChain.java  |   18 +
+ .../apache/hadoop/hbase/ipc/RdmaNative.java   |   85 ++
+ .../hadoop/hbase/ipc/RpcServerFactory.java    |    3 +-
+ .../apache/hadoop/hbase/ipc/ServerCall.java   |   42 +-
+ .../hbase/ipc/SimpleRdmaServerCall.java       |   79 ++
+ .../hadoop/hbase/ipc/SimpleRpcServer.java     |  185 ++-
+ .../ipc/SimpleServerRdmaRpcConnection.java    |  378 ++++++
+ .../hbase/regionserver/HRegionServer.java     |    2 +-
+ rbuild/build.sh                               |   22 +
+ rbuild/push.sh                                |   10 +
+ rbuild/rbuild.sh                              |   24 +
+ 25 files changed, 2536 insertions(+), 78 deletions(-)
+ create mode 100644 hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcCallback.java
+ create mode 100644 hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcClient.java
+ create mode 100644 hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcConnection.java
+ create mode 100644 hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaConnectionPool.java
+ create mode 100644 hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java
+ create mode 100644 hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java
+ create mode 100644 hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRdmaServerCall.java
+ create mode 100644 hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleServerRdmaRpcConnection.java
+ create mode 100644 rbuild/build.sh
+ create mode 100644 rbuild/push.sh
+ create mode 100644 rbuild/rbuild.sh
+
+diff --git a/.gitignore b/.gitignore
+index 0fce7d4..34f6507 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -20,3 +20,12 @@ linklint-*.zip
+ linklint/
+ .checkstyle
+ **/.checkstyle
++
++hbase-build-support/
++
++# recolic
++rbuild/bin
++#rbuild/*.sh
++
++# m2
++/.m2
+diff --git a/conf/hbase-site.xml b/conf/hbase-site.xml
+index c516ac7..33a6fbe 100644
+--- a/conf/hbase-site.xml
++++ b/conf/hbase-site.xml
+@@ -20,5 +20,105 @@
+  * limitations under the License.
+  */
+ -->
++
+ <configuration>
++<!--    <property>
++        <name>hbase.zookeeper.dns.interface</name>
++        <value>ib0</value>
++        <description>The name of the Network Interface from which a ZooKeeper
++            server
++            should report its IP address.
++        </description>
++</property>-->
++
++<!--<property>
++    <name>hbase.regionserver.dns.interface</name>
++    <value>ib0</value>
++    <description>The name of the Network Interface from which a ZooKeeper
++        server
++        should report its IP address.
++    </description>
++</property>-->
++<!--<property>
++    <name>hbase.master.dns.interface</name>
++    <value>ib0</value>
++    <description>The name of the Network Interface from which a ZooKeeper
++        server
++        should report its IP address.
++    </description>
++</property>-->
++<property>
++    <name>hbase.master.hostname</name>
++    <value>inode111</value>
++</property>
++<property>
++    <name>hbase.regionserver.hostname</name>
++    <value>inode112</value>
++</property>
++<property>
++    <name>hbase.master.port</name>
++    <value>16000</value>
++    <description>the client will do a rpc
++    </description>
++</property>
++
++<property>
++        <name>hbase.master</name>
++        <value>inode111:16000</value>
++        <description>The host and port that the HBase
++            master runs at.
++            A value of ‘local’ runs the
++            master and a regionserver
++            in a single process.
++        </description>
++    </property>
++    <property>
++        <name>hbase.rootdir</name>
++        <!--<value>hdfs://inode111:9000/hbase</value>-->
++        <value>file:///home/rdma_match/data/hbase</value>
++        <description>The directory shared by region
++            servers.</description>
++    </property>
++    <property>
++        <name>hbase.rpc.client.impl</name>
++        <value>org.apache.hadoop.hbase.ipc.BlockingRpcClient</value>
++        <description>
++            </description>
++    </property>
++    <property>
++        <name>hbase.rpc.server.impl</name>
++        <value>org.apache.hadoop.hbase.ipc.SimpleRpcServer</value>
++        <description>
++        </description>
++    </property>
++    <property>
++        <name>hbase.cluster.distributed</name>
++        <value>true</value>
++        <description>The mode the cluster will be in.
++            Possible values are   false:
++            standalone and
++pseudo-distributed setups  with managed
++            Zookeeper true: fully-distributed with unmanaged
++            Zookeeper
++            Quorum (see hbase-env.sh)
++        </description>
++    </property>
++    <property>
++        <name>hbase.zookeeper.property.dataDir</name>
++        <value>/home/rdma_match/data/zookeeper</value>
++    </property>
++    <property>
++        <name>hbase.zookeeper.property.clientPort</name>
++        <value>2222</value>
++        <description>Property from ZooKeeper’s config
++            zoo.cfg.
++            The port at which the clients will connect.
++        </description>
++    </property>
++    <property>
++        <name>hbase.zookeeper.quorum</name>
++        <value>inode112</value>
++        <description>Co
++                </description>
++                </property>
+ </configuration>
+diff --git a/conf/log4j.properties b/conf/log4j.properties
+index af28319..cd5074d 100644
+--- a/conf/log4j.properties
++++ b/conf/log4j.properties
+@@ -19,7 +19,6 @@ hbase.root.logger=INFO,console
+ hbase.security.logger=INFO,console
+ hbase.log.dir=.
+ hbase.log.file=hbase.log
+-hbase.log.level=INFO
+ 
+ # Define the root logger to the system property "hbase.root.logger".
+ log4j.rootLogger=${hbase.root.logger}
+@@ -41,7 +40,7 @@ log4j.appender.DRFA.DatePattern=.yyyy-MM-dd
+ log4j.appender.DRFA.layout=org.apache.log4j.PatternLayout
+ 
+ # Pattern format: Date LogLevel LoggerName LogMessage
+-log4j.appender.DRFA.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
++log4j.appender.DRFA.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %m%n
+ 
+ # Rolling File Appender properties
+ hbase.log.maxfilesize=256MB
+@@ -55,7 +54,7 @@ log4j.appender.RFA.MaxFileSize=${hbase.log.maxfilesize}
+ log4j.appender.RFA.MaxBackupIndex=${hbase.log.maxbackupindex}
+ 
+ log4j.appender.RFA.layout=org.apache.log4j.PatternLayout
+-log4j.appender.RFA.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
++log4j.appender.RFA.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %m%n
+ 
+ #
+ # Security audit appender
+@@ -68,7 +67,7 @@ log4j.appender.RFAS.File=${hbase.log.dir}/${hbase.security.log.file}
+ log4j.appender.RFAS.MaxFileSize=${hbase.security.log.maxfilesize}
+ log4j.appender.RFAS.MaxBackupIndex=${hbase.security.log.maxbackupindex}
+ log4j.appender.RFAS.layout=org.apache.log4j.PatternLayout
+-log4j.appender.RFAS.layout.ConversionPattern=%d{ISO8601} %p %c: %.1000m%n
++log4j.appender.RFAS.layout.ConversionPattern=%d{ISO8601} %p %c: %m%n
+ log4j.category.SecurityLogger=${hbase.security.logger}
+ log4j.additivity.SecurityLogger=false
+ #log4j.logger.SecurityLogger.org.apache.hadoop.hbase.security.access.AccessController=TRACE
+@@ -86,24 +85,20 @@ log4j.appender.NullAppender=org.apache.log4j.varia.NullAppender
+ log4j.appender.console=org.apache.log4j.ConsoleAppender
+ log4j.appender.console.target=System.err
+ log4j.appender.console.layout=org.apache.log4j.PatternLayout
+-log4j.appender.console.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %.1000m%n
+-
+-log4j.appender.asyncconsole=org.apache.hadoop.hbase.AsyncConsoleAppender
+-log4j.appender.asyncconsole.target=System.err
++log4j.appender.console.layout.ConversionPattern=%d{ISO8601} %-5p [%t] %c{2}: %m%n
+ 
+ # Custom Logging levels
+ 
+-log4j.logger.org.apache.zookeeper=${hbase.log.level}
++log4j.logger.org.apache.zookeeper=INFO
+ #log4j.logger.org.apache.hadoop.fs.FSNamesystem=DEBUG
+-log4j.logger.org.apache.hadoop.hbase=${hbase.log.level}
+-log4j.logger.org.apache.hadoop.hbase.META=${hbase.log.level}
++log4j.logger.org.apache.hadoop.hbase=OFF
+ # Make these two classes INFO-level. Make them DEBUG to see more zk debug.
+-log4j.logger.org.apache.hadoop.hbase.zookeeper.ZKUtil=${hbase.log.level}
+-log4j.logger.org.apache.hadoop.hbase.zookeeper.ZKWatcher=${hbase.log.level}
++log4j.logger.org.apache.hadoop.hbase.zookeeper.ZKUtil=INFO
++log4j.logger.org.apache.hadoop.hbase.zookeeper.ZooKeeperWatcher=INFO
+ #log4j.logger.org.apache.hadoop.dfs=DEBUG
+ # Set this class to log INFO only otherwise its OTT
+ # Enable this to get detailed connection error/retry logging.
+-# log4j.logger.org.apache.hadoop.hbase.client.ConnectionImplementation=TRACE
++# log4j.logger.org.apache.hadoop.hbase.client.HConnectionManager$HConnectionImplementation=TRACE
+ 
+ 
+ # Uncomment this line to enable tracing on _every_ RPC call (this can be a lot of output)
+@@ -111,14 +106,5 @@ log4j.logger.org.apache.hadoop.hbase.zookeeper.ZKWatcher=${hbase.log.level}
+ 
+ # Uncomment the below if you want to remove logging of client region caching'
+ # and scan of hbase:meta messages
+-# log4j.logger.org.apache.hadoop.hbase.client.ConnectionImplementation=INFO
+-
+-# EventCounter
+-# Add "EventCounter" to rootlogger if you want to use this
+-# Uncomment the line below to add EventCounter information
+-# log4j.appender.EventCounter=org.apache.hadoop.log.metrics.EventCounter
+-
+-# Prevent metrics subsystem start/stop messages (HBASE-17722)
+-log4j.logger.org.apache.hadoop.metrics2.impl.MetricsConfig=WARN
+-log4j.logger.org.apache.hadoop.metrics2.impl.MetricsSinkAdapter=WARN
+-log4j.logger.org.apache.hadoop.metrics2.impl.MetricsSystemImpl=WARN
++# log4j.logger.org.apache.hadoop.hbase.client.HConnectionManager$HConnectionImplementation=INFO
++# log4j.logger.org.apache.hadoop.hbase.client.MetaScanner=INFO
+diff --git a/conf/regionservers b/conf/regionservers
+index 2fbb50c..c27e485 100644
+--- a/conf/regionservers
++++ b/conf/regionservers
+@@ -1 +1 @@
+-localhost
++inode112
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/client/AsyncConnectionImpl.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/client/AsyncConnectionImpl.java
+index cf26756..0994f18 100644
+--- a/hbase-client/src/main/java/org/apache/hadoop/hbase/client/AsyncConnectionImpl.java
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/client/AsyncConnectionImpl.java
+@@ -105,7 +105,7 @@ class AsyncConnectionImpl implements AsyncConnection {
+     this.user = user;
+     this.connConf = new AsyncConnectionConfiguration(conf);
+     this.registry = registry;
+-    this.rpcClient = RpcClientFactory.createClient(conf, clusterId);
++    this.rpcClient = RpcClientFactory.createClient(conf, clusterId,true);
+     this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
+     this.hostnameCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
+     this.rpcTimeout =
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionImplementation.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionImplementation.java
+index 1176cbd..9bfc127 100644
+--- a/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionImplementation.java
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionImplementation.java
+@@ -221,6 +221,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
+    */
+   ConnectionImplementation(Configuration conf,
+                            ExecutorService pool, User user) throws IOException {
++            
+     this.conf = conf;
+     this.user = user;
+     this.batchPool = pool;
+@@ -286,7 +287,7 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
+       this.registry = AsyncRegistryFactory.getRegistry(conf);
+       retrieveClusterId();
+ 
+-      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics);
++      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,true);
+ 
+       // Do we publish the status?
+       if (shouldListen) {
+@@ -312,6 +313,102 @@ class ConnectionImplementation implements ClusterConnection, Closeable {
+     }
+   }
+ 
++  /**
++   * constructor
++   * @param conf Configuration object
++   */
++  ConnectionImplementation(Configuration conf,
++                           ExecutorService pool, User user,boolean isRdma) throws IOException {
++    this.conf = conf;
++    this.user = user;
++    this.batchPool = pool;
++    this.connectionConfig = new ConnectionConfiguration(conf);
++    this.closed = false;
++    this.pause = conf.getLong(HConstants.HBASE_CLIENT_PAUSE,
++        HConstants.DEFAULT_HBASE_CLIENT_PAUSE);
++    long configuredPauseForCQTBE = conf.getLong(HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE, pause);
++    if (configuredPauseForCQTBE < pause) {
++      LOG.warn("The " + HConstants.HBASE_CLIENT_PAUSE_FOR_CQTBE + " setting: "
++          + configuredPauseForCQTBE + " is smaller than " + HConstants.HBASE_CLIENT_PAUSE
++          + ", will use " + pause + " instead.");
++      this.pauseForCQTBE = pause;
++    } else {
++      this.pauseForCQTBE = configuredPauseForCQTBE;
++    }
++    this.useMetaReplicas = conf.getBoolean(HConstants.USE_META_REPLICAS,
++      HConstants.DEFAULT_USE_META_REPLICAS);
++    this.metaReplicaCallTimeoutScanInMicroSecond =
++        connectionConfig.getMetaReplicaCallTimeoutMicroSecondScan();
++
++    // how many times to try, one more than max *retry* time
++    this.numTries = retries2Attempts(connectionConfig.getRetriesNumber());
++    this.rpcTimeout = conf.getInt(
++        HConstants.HBASE_RPC_TIMEOUT_KEY,
++        HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
++    if (conf.getBoolean(NonceGenerator.CLIENT_NONCES_ENABLED_KEY, true)) {
++      synchronized (nonceGeneratorCreateLock) {
++        if (nonceGenerator == null) {
++          nonceGenerator = PerClientRandomNonceGenerator.get();
++        }
++      }
++    } else {
++      nonceGenerator = NO_NONCE_GENERATOR;
++    }
++
++    this.stats = ServerStatisticTracker.create(conf);
++    this.interceptor = (new RetryingCallerInterceptorFactory(conf)).build();
++    this.rpcControllerFactory = RpcControllerFactory.instantiate(conf);
++    this.rpcCallerFactory = RpcRetryingCallerFactory.instantiate(conf, interceptor, this.stats);
++    this.backoffPolicy = ClientBackoffPolicyFactory.create(conf);
++    this.asyncProcess = new AsyncProcess(this, conf, rpcCallerFactory, rpcControllerFactory);
++    if (conf.getBoolean(CLIENT_SIDE_METRICS_ENABLED_KEY, false)) {
++      this.metrics = new MetricsConnection(this);
++    } else {
++      this.metrics = null;
++    }
++    this.metaCache = new MetaCache(this.metrics);
++
++    boolean shouldListen = conf.getBoolean(HConstants.STATUS_PUBLISHED,
++        HConstants.STATUS_PUBLISHED_DEFAULT);
++    this.hostnamesCanChange = conf.getBoolean(RESOLVE_HOSTNAME_ON_FAIL_KEY, true);
++    Class<? extends ClusterStatusListener.Listener> listenerClass =
++        conf.getClass(ClusterStatusListener.STATUS_LISTENER_CLASS,
++            ClusterStatusListener.DEFAULT_STATUS_LISTENER_CLASS,
++            ClusterStatusListener.Listener.class);
++
++    // Is there an alternate BufferedMutator to use?
++    this.alternateBufferedMutatorClassName =
++        this.conf.get(BufferedMutator.CLASSNAME_KEY);
++
++    try {
++      this.registry = AsyncRegistryFactory.getRegistry(conf);
++      retrieveClusterId();
++
++      this.rpcClient = RpcClientFactory.createClient(this.conf, this.clusterId, this.metrics,isRdma);
++
++      // Do we publish the status?
++      if (shouldListen) {
++        if (listenerClass == null) {
++          LOG.warn(HConstants.STATUS_PUBLISHED + " is true, but " +
++              ClusterStatusListener.STATUS_LISTENER_CLASS + " is not set - not listening status");
++        } else {
++          clusterStatusListener = new ClusterStatusListener(
++              new ClusterStatusListener.DeadServerHandler() {
++                @Override
++                public void newDead(ServerName sn) {
++                  clearCaches(sn);
++                  rpcClient.cancelConnections(sn);
++                }
++              }, conf, listenerClass);
++        }
++      }
++    } catch (Throwable e) {
++      // avoid leaks: registry, rpcClient, ...
++      LOG.debug("connection construction failed", e);
++      close();
++      throw e;
++    }
++  }
+   /**
+    * @param useMetaReplicas
+    */
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionUtils.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionUtils.java
+index 63ef865..25ef19a 100644
+--- a/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionUtils.java
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/client/ConnectionUtils.java
+@@ -138,7 +138,8 @@ public final class ConnectionUtils {
+         ServerName serverName, AdminService.BlockingInterface admin,
+         ClientService.BlockingInterface client)
+     throws IOException {
+-      super(conf, pool, user);
++      
++      super(conf, pool, user,false);// rdma
+       this.serverName = serverName;
+       this.localHostAdmin = admin;
+       this.localHostClient = client;
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcCallback.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcCallback.java
+new file mode 100644
+index 0000000..abd09a2
+--- /dev/null
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcCallback.java
+@@ -0,0 +1,71 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ * http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.hadoop.hbase.ipc;
++
++import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
++
++import java.io.IOException;
++import java.io.InterruptedIOException;
++
++import org.apache.yetus.audience.InterfaceAudience;
++
++/**
++ * Simple {@link RpcCallback} implementation providing a
++ * {@link java.util.concurrent.Future}-like {@link BlockingRpcCallback#get()} method, which
++ * will block util the instance's {@link BlockingRpcCallback#run(Object)} method has been called.
++ * {@code R} is the RPC response type that will be passed to the {@link #run(Object)} method.
++ */
++@InterfaceAudience.Private
++public class BlockingRDMARpcCallback<R> implements RpcCallback<R> {
++  private R result;
++  private boolean resultSet = false;
++
++  /**
++   * Called on completion of the RPC call with the response object, or {@code null} in the case of
++   * an error.
++   * @param parameter the response object or {@code null} if an error occurred
++   */
++  @Override
++  public void run(R parameter) {
++    synchronized (this) {
++      result = parameter;
++      resultSet = true;
++      this.notifyAll();
++    }
++  }
++
++  /**
++   * Returns the parameter passed to {@link #run(Object)} or {@code null} if a null value was
++   * passed.  When used asynchronously, this method will block until the {@link #run(Object)}
++   * method has been called.
++   * @return the response object or {@code null} if no response was passed
++   */
++  public synchronized R get() throws IOException {
++    while (!resultSet) {
++      try {
++        this.wait();
++      } catch (InterruptedException ie) {
++        InterruptedIOException exception = new InterruptedIOException(ie.getMessage());
++        exception.initCause(ie);
++        throw exception;
++      }
++    }
++    return result;
++  }
++}
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcClient.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcClient.java
+new file mode 100644
+index 0000000..7401d39
+--- /dev/null
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcClient.java
+@@ -0,0 +1,78 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hbase.ipc;
++
++import org.apache.hbase.thirdparty.com.google.common.annotations.VisibleForTesting;
++
++import java.io.IOException;
++import java.net.SocketAddress;
++
++import javax.net.SocketFactory;
++
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.hbase.HConstants;
++import org.apache.yetus.audience.InterfaceAudience;
++import org.apache.hadoop.hbase.client.MetricsConnection;
++import org.apache.hadoop.net.NetUtils;
++
++/**
++ * Does RPC against a cluster. Manages connections per regionserver in the cluster.
++ * <p>
++ * See HBaseServer
++ */
++@InterfaceAudience.Private
++public class BlockingRDMARpcClient extends AbstractRpcClient<BlockingRDMARpcConnection> {
++
++  protected final SocketFactory socketFactory; // how to create sockets
++
++  /**
++   * Used in test only. Construct an IPC client for the cluster {@code clusterId} with the default
++   * SocketFactory
++   */
++  @VisibleForTesting
++  BlockingRDMARpcClient(Configuration conf) {
++    this(conf, HConstants.CLUSTER_ID_DEFAULT, null, null);
++  }
++
++  /**
++   * Construct an IPC client for the cluster {@code clusterId} with the default SocketFactory This
++   * method is called with reflection by the RpcClientFactory to create an instance
++   * @param conf configuration
++   * @param clusterId the cluster id
++   * @param localAddr client socket bind address.
++   * @param metrics the connection metrics
++   */
++  public BlockingRDMARpcClient(Configuration conf, String clusterId, SocketAddress localAddr,
++      MetricsConnection metrics) {
++    super(conf, clusterId, localAddr, metrics);
++    this.socketFactory = NetUtils.getDefaultSocketFactory(conf);
++  }
++
++  /**
++   * Creates a connection. Can be overridden by a subclass for testing.
++   * @param remoteId - the ConnectionId to use for the connection creation.
++   */
++  @Override
++  protected BlockingRDMARpcConnection createConnection(ConnectionId remoteId) throws IOException {
++    return new BlockingRDMARpcConnection(this, remoteId);
++  }
++
++  @Override
++  protected void closeInternal() {
++  }
++}
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcConnection.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcConnection.java
+new file mode 100644
+index 0000000..5ffbe46
+--- /dev/null
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRDMARpcConnection.java
+@@ -0,0 +1,1080 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hbase.ipc;
++
++import static org.apache.hadoop.hbase.ipc.IPCUtil.buildRequestHeader;
++import static org.apache.hadoop.hbase.ipc.IPCUtil.createRemoteException;
++import static org.apache.hadoop.hbase.ipc.IPCUtil.getTotalSizeWhenWrittenDelimited;
++import static org.apache.hadoop.hbase.ipc.IPCUtil.isFatalConnectionException;
++import static org.apache.hadoop.hbase.ipc.IPCUtil.setCancelled;
++import static org.apache.hadoop.hbase.ipc.IPCUtil.write;
++
++import java.nio.charset.StandardCharsets;
++import java.io.ByteArrayInputStream; 
++import java.io.BufferedInputStream;
++import java.io.BufferedOutputStream;
++import java.io.DataInputStream;
++import java.io.DataOutputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.io.InterruptedIOException;
++import java.io.OutputStream;
++import java.net.Socket;
++import java.net.SocketTimeoutException;
++import java.net.UnknownHostException;
++import java.nio.ByteBuffer;
++import java.security.PrivilegedExceptionAction;
++import java.util.ArrayDeque;
++import java.util.Locale;
++import java.util.Queue;
++import java.util.concurrent.ConcurrentHashMap;
++import java.util.concurrent.ConcurrentMap;
++import java.util.concurrent.ThreadLocalRandom;
++import javax.security.sasl.SaslException;
++import  java.lang.Object;
++
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.hbase.CellScanner;
++import org.apache.hadoop.hbase.DoNotRetryIOException;
++import org.apache.hadoop.hbase.exceptions.ConnectionClosingException;
++import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
++import org.apache.hadoop.hbase.ipc.HBaseRpcController.CancellationCallback;
++import org.apache.hadoop.hbase.log.HBaseMarkers;
++import org.apache.hadoop.hbase.security.HBaseSaslRpcClient;
++import org.apache.hadoop.hbase.security.SaslUtil;
++import org.apache.hadoop.hbase.security.SaslUtil.QualityOfProtection;
++import org.apache.hadoop.hbase.trace.TraceUtil;
++import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
++import org.apache.hadoop.hbase.util.ExceptionUtil;
++import org.apache.hadoop.io.IOUtils;
++import org.apache.hadoop.ipc.RemoteException;
++import org.apache.hadoop.net.NetUtils;
++import org.apache.hadoop.security.UserGroupInformation;
++import org.apache.hadoop.util.StringUtils;
++import org.apache.htrace.core.TraceScope;
++import org.apache.yetus.audience.InterfaceAudience;
++import org.slf4j.Logger;
++import org.slf4j.LoggerFactory;
++import org.apache.hbase.thirdparty.com.google.protobuf.Message;
++import org.apache.hbase.thirdparty.com.google.protobuf.Message.Builder;
++import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
++import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.CellBlockMeta;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHeader;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ExceptionResponse;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
++
++/**
++ * Thread that reads responses and notifies callers. Each connection owns a socket connected to a
++ * remote address. Calls are multiplexed through this socket: responses may be delivered out of
++ * order.
++ */
++@InterfaceAudience.Private
++class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
++
++  private static final Logger LOG = LoggerFactory.getLogger(BlockingRDMARpcConnection.class);
++
++  private final BlockingRDMARpcClient rpcClient;
++
++  private final String threadName;
++  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
++      justification = "We are always under lock actually")
++  private Thread thread;
++
++  // connected socket. protected for writing UT.
++  protected Socket socket = null;
++  private DataInputStream in;
++  private DataOutputStream out;
++
++
++  public final int rdmaPort;
++  private HBaseSaslRpcClient saslRpcClient;
++
++  // currently active calls
++  private final ConcurrentMap<Integer, Call> calls = new ConcurrentHashMap<>();
++
++  private final RobinCallSender RobinCallSender;
++
++  private boolean closed = false;
++
++  private byte[] connectionHeaderPreamble;
++
++  private byte[] connectionHeaderWithLength;
++
++  private boolean waitingConnectionHeaderResponse = false;
++
++  /**
++   * If the client wants to interrupt its calls easily (i.e. call Thread#interrupt), it gets into a
++   * java issue: an interruption during a write closes the socket/channel. A way to avoid this is to
++   * use a different thread for writing. This way, on interruptions, we either cancel the writes or
++   * ignore the answer if the write is already done, but we don't stop the write in the middle. This
++   * adds a thread per region server in the client, so it's kept as an option.
++   * <p>
++   * The implementation is simple: the client threads adds their call to the queue, and then wait
++   * for an answer. The CallSender blocks on the queue, and writes the calls one after the other. On
++   * interruption, the client cancels its call. The CallSender checks that the call has not been
++   * canceled before writing it.
++   * </p>
++   * When the connection closes, all the calls not yet sent are dismissed. The client thread is
++   * notified with an appropriate exception, as if the call was already sent but the answer not yet
++   * received.
++   * </p>
++   */
++  private class RobinCallSender extends Thread {
++    private final CallSender realSenders[]; // create an array here
++    private final int robinSize;
++    private int robin=0;
++    public RobinCallSender(String name, Configuration conf, int size) {
++        robinSize = size;
++        realSenders = new CallSender[size];
++        for(int i = 0; i < size; ++i) {
++            realSenders[i] = new CallSender(name, conf,i);
++        }
++    }
++
++    public void sendCall(final Call call) throws IOException {
++      //LOG.error("add a call to "+ call.hashCode()%robinSize);  
++      realSenders[call.id%robinSize].sendCall(call);
++
++    }
++    public void shutdown() {
++      this.stop();
++      for(int i = 0; i < robinSize; ++i) {
++        realSenders[i].interrupt();
++    }
++    
++    }
++    public void remove(Call call) {
++      //LOG.error("remove a call from "+ call.hashCode()%robinSize);  
++        realSenders[call.id%robinSize].remove(call);
++    }
++    public void run() {
++      try{
++        for(int i = 0; i < robinSize; ++i) {
++            realSenders[i].start();
++        }
++        for(int i = 0; i < robinSize; ++i) {
++            realSenders[i].join();
++        }
++      }catch(InterruptedException e ){
++        LOG.warn("InterruptedException in RobinCallSender");
++      }
++    }
++    public void cleanup(IOException e) {
++        // TODO: Can I do this?
++        for(int i = 0; i < robinSize; ++i) {
++            realSenders[i].cleanup(e);
++        }
++    }
++  }
++  private class CallSender extends Thread {
++
++    private DataInputStream rdma_in = null;
++    private DataOutputStream rdma_out = null ;
++    private ByteArrayOutputStream rdma_out_stream = null;
++    private  RdmaNative rdma = new RdmaNative();
++    //private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
++    //private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
++     private RdmaNative.RdmaClientConnection rdmaconn;
++
++     private void setupRdmaIOstreams() throws IOException {
++
++      if(this.rdmaconn!=null){
++      //if(this.rdmaconn.ifInit()){//this is already set
++
++        //LOG.error("RDMA setupRdmaIOstreams conn reuse, clean the old stream");
++          ////this.rdma_out.close();
++        this.rdma_out_stream.reset();//clear the underlying one.
++        return ;
++      //}
++      //LOG.error("get a rdmaconn, not inited!!!");
++
++     }
++  //LOG.debug("RDMA rdmaConnect  with addr and port and name"+remoteId.address+this.rdmaPort+threadName);
++
++    do this.rdmaconn=rdma.rdmaConnect(remoteId.address.toString(),rdmaPort);
++    while (this.rdmaconn==null);  
++
++
++  this.rdma_out_stream = new ByteArrayOutputStream();
++  this.rdma_out = new DataOutputStream(this.rdma_out_stream);
++
++
++  try {
++      // Now write out the connection header//
++      // this will init the servie and usr ugi
++    rdma_out.write(connectionHeaderWithLength);// essential connectionHeaderRead
++    this.rdmaconn.init();
++
++  } catch (Throwable t) {
++    LOG.warn("Error in RDMA setupRDMAIOstream");
++  }
++
++  // start the receiver thread after the socket connection has been set up
++  thread = new Thread(this, threadName);
++  thread.setDaemon(true);
++  thread.start();
++}
++private void writeRdmaRequest(Call call) throws IOException {
++  //LOG.debug("RDMA writeRdmaRequest hooked what should go to "+remoteId.getAddress());
++  ByteBuffer cellBlock = rpcClient.cellBlockBuilder.buildCellBlock(codec,
++    compressor, call.cells);
++  CellBlockMeta cellBlockMeta;
++  if (cellBlock != null) {
++    cellBlockMeta = CellBlockMeta.newBuilder().setLength(cellBlock.limit()).build();
++  } else {
++    cellBlockMeta = null;
++  }
++  RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
++  
++
++
++  setupRdmaIOstreams();
++
++  // Now we're going to write the call. We take the lock, then check that the connection
++  // is still valid, and, if so we do the write to the socket. If the write fails, we don't
++  // know where we stand, we have to close the connection.
++  if (Thread.interrupted()) {
++    throw new InterruptedIOException();
++  }
++
++  calls.put(call.id, call); // We put first as we don't want the connection to become idle.
++  // from here, we do not throw any exception to upper layer as the call has been tracked in the
++  // pending calls map.  
++  try {
++    call.callStats.setRequestSizeBytes(write(this.rdma_out, requestHeader, call.param, cellBlock));
++    
++    byte[] sbuf=this.rdma_out_stream.toByteArray();
++    //LOG.trace("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
++    //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(sbuf)).toString());
++    //allocate direct buf
++    ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
++    ByteBuffer tmp = ByteBuffer.wrap(sbuf);
++    directbuf.put(tmp);
++    if(!rdmaconn.writeQuery(directbuf))
++    LOG.error("RDMA writeQuery failed");
++
++    //LOG.trace("RDMA rdmaWrite with length and content "+rdma_out_stream.size()+" "+
++    //StandardCharsets.UTF_8.decode(directbuf).toString());
++    //rdmaconn.close();//close the one have problem, get a new
++    //return;
++  } catch (Throwable t) {
++    LOG.warn("Error while writing RDMA call, call_id:" + call.id, t);
++    return;
++  }
++  //
++  readRdmaResponse();//waiting for the response
++  //LOG.error("RDMA readRdmaResponse done");
++}
++private void readRdmaResponse() {
++  Call call = null;
++  boolean expectedCall = false;
++  try {
++    //LOG.error("RDMA readRdmaResponse waiting");
++    ByteBuffer rbuf=this.rdmaconn.readResponse();
++    if (rbuf==null) {
++      LOG.info("RDMA readRdmaResponse lbs' bug");
++    }
++    int length = rbuf.remaining();
++    LOG.info("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
++    rbuf.rewind();
++    byte[] arr = new byte[length];
++    rbuf.get(arr);
++    rdma_in=new DataInputStream(new ByteArrayInputStream(arr));
++    int totalSize;
++    do {
++       // See HBaseServer.Call.setResponse for where we write out the response.
++    // Total size of the response. Unused. But have to read it in anyways.
++    totalSize = rdma_in.readInt();
++    //LOG.trace("RDMA get rbuf totalSize "+totalSize);
++    // Read the header
++    ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(rdma_in);
++    int id = responseHeader.getCallId();
++    call = calls.remove(id); // call.done have to be set before leaving this method
++    //LOG.trace("RDMA remove call");
++    expectedCall = (call != null && !call.isDone());
++    if (!expectedCall) {
++      //LOG.trace("RDMA !expectedCall");
++      // So we got a response for which we have no corresponding 'call' here on the client-side.
++      // We probably timed out waiting, cleaned up all references, and now the server decides
++      // to return a response. There is nothing we can do w/ the response at this stage. Clean
++      // out the wire of the response so its out of the way and we can get other responses on
++      // this connection.
++      int readSoFar = getTotalSizeWhenWrittenDelimited(responseHeader);
++      int whatIsLeftToRead = totalSize - readSoFar;
++      IOUtils.skipFully(rdma_in, whatIsLeftToRead);
++      if (call != null) {
++        call.callStats.setResponseSizeBytes(totalSize);
++      }
++      return;
++    }
++    if (responseHeader.hasException()) {
++      //LOG.trace("RDMA hasException! ");
++      ExceptionResponse exceptionResponse = responseHeader.getException();
++      RemoteException re = createRemoteException(exceptionResponse);
++      call.setException(re);
++      call.callStats.setResponseSizeBytes(totalSize);
++    } else {
++      //LOG.trace("RDMA noException! ");
++      Message value = null;
++      if (call.responseDefaultType != null) {
++        Builder builder = call.responseDefaultType.newBuilderForType();
++        ProtobufUtil.mergeDelimitedFrom(builder, rdma_in);
++        value = builder.build();
++      }
++      CellScanner cellBlockScanner = null;
++      if (responseHeader.hasCellBlockMeta()) {
++        int size = responseHeader.getCellBlockMeta().getLength();
++        byte[] cellBlock = new byte[size];
++
++          IOUtils.readFully(this.rdma_in, cellBlock, 0, cellBlock.length);
++        
++        cellBlockScanner = rpcClient.cellBlockBuilder.createCellScanner(codec,
++          compressor, cellBlock);
++      }
++      call.setResponse(value, cellBlockScanner);
++      call.callStats.setResponseSizeBytes(totalSize);
++    }
++      
++    } while (length > totalSize );
++   
++    //LOG.trace("RDMA  readRdmaResponse! done");
++    
++  } catch (IOException e){
++    if (expectedCall) {
++      call.setException(e);
++    }
++  }
++}
++    private final Queue<Call> callsToWrite;
++
++    private final int maxQueueSize;
++
++    public CallSender(String name, Configuration conf,int i) {
++      int queueSize = conf.getInt("hbase.ipc.client.write.queueSize", 1000);
++      callsToWrite = new ArrayDeque<>(queueSize);
++      this.maxQueueSize = queueSize;
++      setDaemon(true);
++      setName(name + " - writer "+i);
++    }
++
++    public void sendCall(final Call call) throws IOException {
++      if (callsToWrite.size() >= maxQueueSize) {
++        throw new IOException("Can't add the call " + call.id
++            + " to the write queue. callsToWrite.size()=" + callsToWrite.size());
++      }
++      callsToWrite.offer(call);
++      BlockingRDMARpcConnection.this.notifyAll();
++    }
++
++    public void remove(Call call) {
++      callsToWrite.remove(call);
++      // By removing the call from the expected call list, we make the list smaller, but
++      // it means as well that we don't know how many calls we cancelled.
++      calls.remove(call.id);
++      call.setException(new CallCancelledException("Call id=" + call.id + ", waitTime="
++          + (EnvironmentEdgeManager.currentTime() - call.getStartTime()) + ", rpcTimeout="
++          + call.timeout));
++    }
++
++    /**
++     * Reads the call from the queue, write them on the socket.
++     */
++    @Override
++    public void run() {
++      synchronized (BlockingRDMARpcConnection.this) {
++        while (!closed) {
++          if (callsToWrite.isEmpty()) {
++            // We should use another monitor object here for better performance since the read
++            // thread also uses ConnectionImpl.this. But this makes the locking schema more
++            // complicated, can do it later as an optimization.
++            try {
++              BlockingRDMARpcConnection.this.wait();
++            } catch (InterruptedException e) {
++            }
++            // check if we need to quit, so continue the main loop instead of fallback.
++            continue;
++          }
++          Call call = callsToWrite.poll();
++          if (call.isDone()) {
++            continue;
++          }
++          try {
++            
++            if((!useSasl)&&(rdmaPort==16021))
++            {  writeRdmaRequest(call);
++              BlockingRDMARpcConnection.this.notifyAll();
++              continue;
++            }
++
++            //for normal call
++            tracedWriteRequest(call);
++
++          } catch (IOException e) {
++            // exception here means the call has not been added to the pendingCalls yet, so we need
++            // to fail it by our own.
++            if (LOG.isDebugEnabled()) {
++              LOG.debug("call write error for call #" + call.id, e);
++            }
++            call.setException(e);
++            closeConn(e);
++          }
++        }
++      }
++    }
++
++    /**
++     * Cleans the call not yet sent when we finish.
++     */
++    public void cleanup(IOException e) {
++      IOException ie = new ConnectionClosingException(
++          "Connection to " + remoteId.address + " is closing.");
++      for (Call call : callsToWrite) {
++        call.setException(ie);
++      }
++      callsToWrite.clear();
++    }
++  }
++
++  BlockingRDMARpcConnection(BlockingRDMARpcClient rpcClient, ConnectionId remoteId) throws IOException {
++    super(rpcClient.conf, AbstractRpcClient.WHEEL_TIMER, remoteId, rpcClient.clusterId,
++        rpcClient.userProvider.isHBaseSecurityEnabled(), rpcClient.codec, rpcClient.compressor);
++    this.rpcClient = rpcClient;
++    if (remoteId.getAddress().isUnresolved()) {
++      throw new UnknownHostException("unknown host: " + remoteId.getAddress().getHostName());
++    }
++    //this.rdma = new RdmaNative rdma;
++    this.connectionHeaderPreamble = getConnectionHeaderPreamble();
++    ConnectionHeader header = getConnectionHeader();
++    ByteArrayOutputStream baos = new ByteArrayOutputStream(4 + header.getSerializedSize());
++    DataOutputStream dos = new DataOutputStream(baos);
++    dos.writeInt(header.getSerializedSize());
++    header.writeTo(dos);
++    assert baos.size() == 4 + header.getSerializedSize();
++    this.connectionHeaderWithLength = baos.getBuffer();
++    this.rdmaPort=remoteId.getAddress().getPort()+1;//plus one
++
++
++    UserGroupInformation ticket = remoteId.ticket.getUGI();
++    this.threadName = "IPC Client (" + this.rpcClient.socketFactory.hashCode() + ") connection to "
++        + remoteId.getAddress().toString()
++        + ((ticket == null) ? " from an unknown user" : (" from " + ticket.getUserName()));
++
++    //if (this.rpcClient.conf.getBoolean(BlockingRpcClient.SPECIFIC_WRITE_THREAD, false)) {
++      RobinCallSender = new RobinCallSender(threadName, this.rpcClient.conf,1);//debugging
++      RobinCallSender.start();
++    // } else {
++    //   RobinCallSender = null;
++    // }
++    setupIOstreams();
++  }
++
++  // protected for write UT.
++  protected void setupConnection() throws IOException {
++    short ioFailures = 0;
++    short timeoutFailures = 0;
++    while (true) {
++      try {
++        this.socket = this.rpcClient.socketFactory.createSocket();
++        this.socket.setTcpNoDelay(this.rpcClient.isTcpNoDelay());
++        this.socket.setKeepAlive(this.rpcClient.tcpKeepAlive);
++        if (this.rpcClient.localAddr != null) {
++          this.socket.bind(this.rpcClient.localAddr);
++        }
++        NetUtils.connect(this.socket, remoteId.getAddress(), this.rpcClient.connectTO);
++        this.socket.setSoTimeout(this.rpcClient.readTO);
++        return;
++      } catch (SocketTimeoutException toe) {
++        /*
++         * The max number of retries is 45, which amounts to 20s*45 = 15 minutes retries.
++         */
++        if (LOG.isDebugEnabled()) {
++          LOG.debug("Received exception in connection setup.\n" +
++              StringUtils.stringifyException(toe));
++        }
++        handleConnectionFailure(timeoutFailures++, this.rpcClient.maxRetries, toe);
++      } catch (IOException ie) {
++        if (LOG.isDebugEnabled()) {
++          LOG.debug("Received exception in connection setup.\n" +
++              StringUtils.stringifyException(ie));
++        }
++        handleConnectionFailure(ioFailures++, this.rpcClient.maxRetries, ie);
++      }
++    }
++  }
++
++  /**
++   * Handle connection failures If the current number of retries is equal to the max number of
++   * retries, stop retrying and throw the exception; Otherwise backoff N seconds and try connecting
++   * again. This Method is only called from inside setupIOstreams(), which is synchronized. Hence
++   * the sleep is synchronized; the locks will be retained.
++   * @param curRetries current number of retries
++   * @param maxRetries max number of retries allowed
++   * @param ioe failure reason
++   * @throws IOException if max number of retries is reached
++   */
++  private void handleConnectionFailure(int curRetries, int maxRetries, IOException ioe)
++      throws IOException {
++    closeSocket();
++
++    // throw the exception if the maximum number of retries is reached
++    if (curRetries >= maxRetries || ExceptionUtil.isInterrupt(ioe)) {
++      throw ioe;
++    }
++
++    // otherwise back off and retry
++    try {
++      Thread.sleep(this.rpcClient.failureSleep);
++    } catch (InterruptedException ie) {
++      ExceptionUtil.rethrowIfInterrupt(ie);
++    }
++
++    if (LOG.isInfoEnabled()) {
++      LOG.info("Retrying connect to server: " + remoteId.getAddress() +
++        " after sleeping " + this.rpcClient.failureSleep + "ms. Already tried " + curRetries +
++        " time(s).");
++    }
++  }
++
++  /*
++   * wait till someone signals us to start reading RPC response or it is idle too long, it is marked
++   * as to be closed, or the client is marked as not running.
++   * @return true if it is time to read a response; false otherwise.
++   */
++  private synchronized boolean waitForWork() {
++    // beware of the concurrent access to the calls list: we can add calls, but as well
++    // remove them.
++    long waitUntil = EnvironmentEdgeManager.currentTime() + this.rpcClient.minIdleTimeBeforeClose;
++    for (;;) {
++      if (thread == null) {
++        return false;
++      }
++      if (!calls.isEmpty()) {
++        return true;
++      }
++      if (EnvironmentEdgeManager.currentTime() >= waitUntil) {
++        closeConn(
++          new IOException("idle connection closed with " + calls.size() + " pending request(s)"));
++        return false;
++      }
++      try {
++        wait(Math.min(this.rpcClient.minIdleTimeBeforeClose, 1000));
++      } catch (InterruptedException e) {
++      }
++    }
++  }
++
++  @Override
++  public void run() {
++    if (LOG.isTraceEnabled()) {
++      LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
++    }
++    while (waitForWork()) {
++    
++      readResponse();
++      //LOG.trace(" readResponse done");
++      
++    }
++    if (LOG.isTraceEnabled()) {
++      LOG.trace(threadName + ": stopped, connections " + this.rpcClient.connections.size());
++    }
++  }
++
++  private void disposeSasl() {
++    if (saslRpcClient != null) {
++      saslRpcClient.dispose();
++      saslRpcClient = null;
++    }
++  }
++
++  private boolean setupSaslConnection(final InputStream in2, final OutputStream out2)
++      throws IOException {
++    saslRpcClient = new HBaseSaslRpcClient(authMethod, token, serverPrincipal,
++        this.rpcClient.fallbackAllowed, this.rpcClient.conf.get("hbase.rpc.protection",
++          QualityOfProtection.AUTHENTICATION.name().toLowerCase(Locale.ROOT)),
++        this.rpcClient.conf.getBoolean(CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT));
++    return saslRpcClient.saslConnect(in2, out2);
++  }
++
++  /**
++   * If multiple clients with the same principal try to connect to the same server at the same time,
++   * the server assumes a replay attack is in progress. This is a feature of kerberos. In order to
++   * work around this, what is done is that the client backs off randomly and tries to initiate the
++   * connection again. The other problem is to do with ticket expiry. To handle that, a relogin is
++   * attempted.
++   * <p>
++   * The retry logic is governed by the {@link #shouldAuthenticateOverKrb} method. In case when the
++   * user doesn't have valid credentials, we don't need to retry (from cache or ticket). In such
++   * cases, it is prudent to throw a runtime exception when we receive a SaslException from the
++   * underlying authentication implementation, so there is no retry from other high level (for eg,
++   * HCM or HBaseAdmin).
++   * </p>
++   */
++  private void handleSaslConnectionFailure(final int currRetries, final int maxRetries,
++      final Exception ex, final UserGroupInformation user)
++      throws IOException, InterruptedException {
++    closeSocket();
++    user.doAs(new PrivilegedExceptionAction<Object>() {
++      @Override
++      public Object run() throws IOException, InterruptedException {
++        if (shouldAuthenticateOverKrb()) {
++          if (currRetries < maxRetries) {
++            if (LOG.isDebugEnabled()) {
++              LOG.debug("Exception encountered while connecting to " +
++                "the server : " + StringUtils.stringifyException(ex));
++            }
++            // try re-login
++            relogin();
++            disposeSasl();
++            // have granularity of milliseconds
++            // we are sleeping with the Connection lock held but since this
++            // connection instance is being used for connecting to the server
++            // in question, it is okay
++            Thread.sleep(ThreadLocalRandom.current().nextInt(reloginMaxBackoff) + 1);
++            return null;
++          } else {
++            String msg = "Couldn't setup connection for "
++                + UserGroupInformation.getLoginUser().getUserName() + " to " + serverPrincipal;
++            LOG.warn(msg, ex);
++            throw (IOException) new IOException(msg).initCause(ex);
++          }
++        } else {
++          LOG.warn("Exception encountered while connecting to " + "the server : " + ex);
++        }
++        if (ex instanceof RemoteException) {
++          throw (RemoteException) ex;
++        }
++        if (ex instanceof SaslException) {
++          String msg = "SASL authentication failed."
++              + " The most likely cause is missing or invalid credentials." + " Consider 'kinit'.";
++          LOG.error(HBaseMarkers.FATAL, msg, ex);
++          throw new RuntimeException(msg, ex);
++        }
++        throw new IOException(ex);
++      }
++    });
++  }
++
++  private void setupIOstreams() throws IOException {
++    if (socket != null) {
++      // The connection is already available. Perfect.
++      return;
++    }
++
++    if (this.rpcClient.failedServers.isFailedServer(remoteId.getAddress())) {
++      if (LOG.isDebugEnabled()) {
++        LOG.debug("Not trying to connect to " + remoteId.address
++            + " this server is in the failed servers list");
++      }
++      throw new FailedServerException(
++          "This server is in the failed servers list: " + remoteId.address);
++    }
++
++    try {
++      if (LOG.isDebugEnabled()) {
++        LOG.debug("Connecting to " + remoteId.address);
++      }
++
++      short numRetries = 0;
++      final short MAX_RETRIES = 5;
++      while (true) {
++        setupConnection();
++        InputStream inStream = NetUtils.getInputStream(socket);
++        // This creates a socket with a write timeout. This timeout cannot be changed.
++        OutputStream outStream = NetUtils.getOutputStream(socket, this.rpcClient.writeTO);
++        // Write out the preamble -- MAGIC, version, and auth to use.
++        writeConnectionHeaderPreamble(outStream);
++        if (useSasl) {
++          final InputStream in2 = inStream;
++          final OutputStream out2 = outStream;
++          UserGroupInformation ticket = getUGI();
++          boolean continueSasl;
++          if (ticket == null) {
++            throw new FatalConnectionException("ticket/user is null");
++          }
++          try {
++            continueSasl = ticket.doAs(new PrivilegedExceptionAction<Boolean>() {
++              @Override
++              public Boolean run() throws IOException {
++                return setupSaslConnection(in2, out2);
++              }
++            });
++          } catch (Exception ex) {
++            ExceptionUtil.rethrowIfInterrupt(ex);
++            handleSaslConnectionFailure(numRetries++, MAX_RETRIES, ex, ticket);
++            continue;
++          }
++          if (continueSasl) {
++            // Sasl connect is successful. Let's set up Sasl i/o streams.
++            inStream = saslRpcClient.getInputStream();
++            outStream = saslRpcClient.getOutputStream();
++          } else {
++            // fall back to simple auth because server told us so.
++            // do not change authMethod and useSasl here, we should start from secure when
++            // reconnecting because regionserver may change its sasl config after restart.
++          }
++        }
++        this.in = new DataInputStream(new BufferedInputStream(inStream));
++        this.out = new DataOutputStream(new BufferedOutputStream(outStream));
++        // Now write out the connection header
++          writeConnectionHeader();
++        // process the response from server for connection header if necessary
++        processResponseForConnectionHeader();
++
++        break;
++      }
++    } catch (Throwable t) {
++      closeSocket();
++      IOException e = ExceptionUtil.asInterrupt(t);
++      if (e == null) {
++        this.rpcClient.failedServers.addToFailedServers(remoteId.address, t);
++        if (t instanceof LinkageError) {
++          // probably the hbase hadoop version does not match the running hadoop version
++          e = new DoNotRetryIOException(t);
++        } else if (t instanceof IOException) {
++          e = (IOException) t;
++        } else {
++          e = new IOException("Could not set up IO Streams to " + remoteId.address, t);
++        }
++      }    
++      throw e;
++    }
++
++    // start the receiver thread after the socket connection has been set up
++    thread = new Thread(this, threadName);
++    thread.setDaemon(true);
++    thread.start();
++  }
++
++
++  /**
++   * Write the RPC header: {@code <MAGIC WORD -- 'HBas'> <ONEBYTE_VERSION> <ONEBYTE_AUTH_TYPE>}
++   */
++  private void writeConnectionHeaderPreamble(OutputStream out) throws IOException {
++    out.write(connectionHeaderPreamble);
++    out.flush();
++  }
++
++  /**
++   * Write the connection header.
++   */
++  private void writeConnectionHeader() throws IOException {
++    boolean isCryptoAesEnable = false;
++    // check if Crypto AES is enabled
++    if (saslRpcClient != null) {
++      boolean saslEncryptionEnabled = SaslUtil.QualityOfProtection.PRIVACY.
++          getSaslQop().equalsIgnoreCase(saslRpcClient.getSaslQOP());
++      isCryptoAesEnable = saslEncryptionEnabled && conf.getBoolean(
++          CRYPTO_AES_ENABLED_KEY, CRYPTO_AES_ENABLED_DEFAULT);
++    }
++
++    // if Crypto AES is enabled, set transformation and negotiate with server
++    if (isCryptoAesEnable) {
++      waitingConnectionHeaderResponse = true;
++    }
++    this.out.write(connectionHeaderWithLength);
++    this.out.flush();
++  }
++
++  private void processResponseForConnectionHeader() throws IOException {
++    // if no response excepted, return
++    if (!waitingConnectionHeaderResponse) return;
++    try {
++        int len = this.in.readInt();
++        byte[] buff = new byte[len];
++        int readSize = this.in.read(buff);
++        if (LOG.isDebugEnabled()) {
++          LOG.debug("Length of response for connection header:" + readSize);
++        }
++  
++        RPCProtos.ConnectionHeaderResponse connectionHeaderResponse =
++            RPCProtos.ConnectionHeaderResponse.parseFrom(buff);
++  
++        // Get the CryptoCipherMeta, update the HBaseSaslRpcClient for Crypto Cipher
++        if (connectionHeaderResponse.hasCryptoCipherMeta()) {
++          negotiateCryptoAes(connectionHeaderResponse.getCryptoCipherMeta());
++        }
++        waitingConnectionHeaderResponse = false;
++
++    } catch (SocketTimeoutException ste) {
++      LOG.error(HBaseMarkers.FATAL, "Can't get the connection header response for rpc timeout, "
++          + "please check if server has the correct configuration to support the additional "
++          + "function.", ste);
++      // timeout when waiting the connection header response, ignore the additional function
++      throw new IOException("Timeout while waiting connection header response", ste);
++    }
++  }
++
++  private void negotiateCryptoAes(RPCProtos.CryptoCipherMeta cryptoCipherMeta)
++      throws IOException {
++    // initilize the Crypto AES with CryptoCipherMeta
++    saslRpcClient.initCryptoCipher(cryptoCipherMeta, this.rpcClient.conf);
++    // reset the inputStream/outputStream for Crypto AES encryption
++    this.in = new DataInputStream(new BufferedInputStream(saslRpcClient.getInputStream()));
++    this.out = new DataOutputStream(new BufferedOutputStream(saslRpcClient.getOutputStream()));
++  }
++
++  private void tracedWriteRequest(Call call) throws IOException {
++    try (TraceScope ignored = TraceUtil.createTrace("RpcClientImpl.tracedWriteRequest",
++          call.span)) {
++
++      // LOG.warn("RDMA the connectionHeaderPreamble connectionHeaderWithLength "+
++      // StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderPreamble)).toString()+" and "
++      // +StandardCharsets.UTF_8.decode(ByteBuffer.wrap(connectionHeaderWithLength)).toString());
++       //String callMd = call.md.getName();
++       
++      //if ((!useSasl) && (remoteId.getAddress().toString().equals("inode112/10.10.0.112:16020"))&&
++      //((callMd.equals("Scan"))|callMd.equals("Get")|callMd.equals("Mutate")|callMd.equals("Multi")))//this go to the regionserver
++      //for these belongs to regionserver, so we get it to that same conn
++      if((!useSasl)&&(rdmaPort==16021))
++        {
++          //LOG.debug("RDMA get a call with callMd "+ callMd);
++        //writeRdmaRequest(call);}
++        writeRequest(call);}//debugging
++      else
++      {//LOG.debug("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
++        writeRequest(call);}
++    }
++  }
++
++  /**
++   * Initiates a call by sending the parameter to the remote server. Note: this is not called from
++   * the Connection thread, but by other threads.
++   * @see #readResponse()
++   */
++  private void writeRequest(Call call) throws IOException {
++    ByteBuffer cellBlock = this.rpcClient.cellBlockBuilder.buildCellBlock(this.codec,
++      this.compressor, call.cells);
++    CellBlockMeta cellBlockMeta;
++    if (cellBlock != null) {
++      cellBlockMeta = CellBlockMeta.newBuilder().setLength(cellBlock.limit()).build();
++    } else {
++      cellBlockMeta = null;
++    }
++    RequestHeader requestHeader = buildRequestHeader(call, cellBlockMeta);
++
++
++
++    // Now we're going to write the call. We take the lock, then check that the connection
++    // is still valid, and, if so we do the write to the socket. If the write fails, we don't
++    // know where we stand, we have to close the connection.
++    if (Thread.interrupted()) {
++      throw new InterruptedIOException();
++    }
++
++    calls.put(call.id, call); // We put first as we don't want the connection to become idle.
++    // from here, we do not throw any exception to upper layer as the call has been tracked in the
++    // pending calls map.
++    try {
++      call.callStats.setRequestSizeBytes(write(this.out, requestHeader, call.param, cellBlock));
++    } catch (Throwable t) {
++      if(LOG.isTraceEnabled()) {
++        LOG.trace("Error while writing call, call_id:" + call.id, t);
++      }
++      IOException e = IPCUtil.toIOE(t);
++      closeConn(e);
++      return;
++    }
++    notifyAll();
++  }
++
++  /*
++   * Receive a response. Because only one receiver, so no synchronization on in.
++   */
++  private void readResponse() {
++    Call call = null;
++    boolean expectedCall = false;
++    try {
++      setupIOstreams();
++    
++      int totalSize = in.readInt();
++
++      // Read the header
++      ResponseHeader responseHeader = ResponseHeader.parseDelimitedFrom(in);
++      int id = responseHeader.getCallId();
++      call = calls.remove(id); // call.done have to be set before leaving this method
++      expectedCall = (call != null && !call.isDone());
++      if (!expectedCall) {
++        //LOG.trace("normal !expectedCall");
++        // So we got a response for which we have no corresponding 'call' here on the client-side.
++        // We probably timed out waiting, cleaned up all references, and now the server decides
++        // to return a response. There is nothing we can do w/ the response at this stage. Clean
++        // out the wire of the response so its out of the way and we can get other responses on
++        // this connection.
++        int readSoFar = getTotalSizeWhenWrittenDelimited(responseHeader);
++        int whatIsLeftToRead = totalSize - readSoFar;
++        IOUtils.skipFully(in, whatIsLeftToRead);
++        if (call != null) {
++          call.callStats.setResponseSizeBytes(totalSize);
++          call.callStats
++              .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
++        }
++        return;
++      }
++      if (responseHeader.hasException()) {
++        //LOG.trace("normal has Exception");
++        ExceptionResponse exceptionResponse = responseHeader.getException();
++        RemoteException re = createRemoteException(exceptionResponse);
++        call.setException(re);
++        call.callStats.setResponseSizeBytes(totalSize);
++        call.callStats
++            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
++        if (isFatalConnectionException(exceptionResponse)) {
++          synchronized (this) {
++            closeConn(re);
++          }
++        }
++      } else {
++        //LOG.trace("normal no Exception");
++        Message value = null;
++        if (call.responseDefaultType != null) {
++          Builder builder = call.responseDefaultType.newBuilderForType();
++          ProtobufUtil.mergeDelimitedFrom(builder, in);
++          value = builder.build();
++        }
++        CellScanner cellBlockScanner = null;
++        if (responseHeader.hasCellBlockMeta()) {
++          int size = responseHeader.getCellBlockMeta().getLength();
++          byte[] cellBlock = new byte[size];
++
++            IOUtils.readFully(this.in, cellBlock, 0, cellBlock.length);
++          
++          cellBlockScanner = this.rpcClient.cellBlockBuilder.createCellScanner(this.codec,
++            this.compressor, cellBlock);
++        }
++        call.setResponse(value, cellBlockScanner);
++        call.callStats.setResponseSizeBytes(totalSize);
++        call.callStats
++            .setCallTimeMs(EnvironmentEdgeManager.currentTime() - call.callStats.getStartTime());
++      }
++    } catch (IOException e) {
++      if (expectedCall) {
++        call.setException(e);
++      }
++      if (e instanceof SocketTimeoutException) {
++        // Clean up open calls but don't treat this as a fatal condition,
++        // since we expect certain responses to not make it by the specified
++        // {@link ConnectionId#rpcTimeout}.
++        if (LOG.isTraceEnabled()) {
++          LOG.trace("ignored", e);
++        }
++      } else {
++        synchronized (this) {
++          closeConn(e);
++        }
++      }
++    }
++  }
++
++
++  @Override
++  protected synchronized void callTimeout(Call call) {
++    // call sender
++    calls.remove(call.id);
++  }
++
++  // just close socket input and output.
++  private void closeSocket() {
++    IOUtils.closeStream(out);
++    IOUtils.closeStream(in);
++    IOUtils.closeSocket(socket);
++    out = null;
++    in = null;
++    socket = null;
++  }
++
++  // close socket, reader, and clean up all pending calls.
++  private void closeConn(IOException e) {
++    if (thread == null) {
++      return;
++    }
++    thread.interrupt();
++    thread = null;
++    closeSocket();
++    if (RobinCallSender != null) {
++      LOG.error("closeConn !");
++      //RobinCallSender.cleanup(e);
++      RobinCallSender.shutdown();
++    }
++    for (Call call : calls.values()) {
++      call.setException(e);
++    }
++    calls.clear();
++  }
++
++  // release all resources, the connection will not be used any more.
++  @Override
++  public synchronized void shutdown() {
++    closed = true;
++    LOG.error("shutdown !");
++    if (RobinCallSender != null) {
++      RobinCallSender.shutdown();
++      
++        LOG.error("shutdown now !");
++  
++      
++    }
++    closeConn(new IOException("connection to " + remoteId.address + " closed"));
++  }
++
++  @Override
++  public void cleanupConnection() {
++    // do nothing
++  }
++
++  @Override
++  public synchronized void sendRequest(final Call call, HBaseRpcController pcrc)
++      throws IOException {
++    pcrc.notifyOnCancel(new RpcCallback<Object>() {
++
++      @Override
++      public void run(Object parameter) {
++        setCancelled(call);
++        synchronized (BlockingRDMARpcConnection.this) {
++          if (RobinCallSender != null) {
++            RobinCallSender.remove(call);
++          } else {
++            calls.remove(call.id);
++          }
++        }
++      }
++    }, new CancellationCallback() {
++
++      @Override
++      public void run(boolean cancelled) throws IOException {
++        if (cancelled) {
++          setCancelled(call);
++          return;
++        }
++        scheduleTimeoutTask(call);
++        if (RobinCallSender != null) {
++          RobinCallSender.sendCall(call);
++        } else {
++          tracedWriteRequest(call);
++        }
++      }
++    });
++  }
++
++  @Override
++  public synchronized boolean isActive() {
++    return thread != null;
++  }
++}
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRpcConnection.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRpcConnection.java
+index b1c3ea2..2573527 100644
+--- a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRpcConnection.java
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/BlockingRpcConnection.java
+@@ -518,7 +518,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
+     thread.setDaemon(true);
+     thread.start();
+   }
+-
+   /**
+    * Write the RPC header: {@code <MAGIC WORD -- 'HBas'> <ONEBYTE_VERSION> <ONEBYTE_AUTH_TYPE>}
+    */
+@@ -552,7 +551,6 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
+     // if no response excepted, return
+     if (!waitingConnectionHeaderResponse) return;
+     try {
+-      // read the ConnectionHeaderResponse from server
+       int len = this.in.readInt();
+       byte[] buff = new byte[len];
+       int readSize = this.in.read(buff);
+@@ -568,6 +566,7 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
+         negotiateCryptoAes(connectionHeaderResponse.getCryptoCipherMeta());
+       }
+       waitingConnectionHeaderResponse = false;
++      
+     } catch (SocketTimeoutException ste) {
+       LOG.error(HBaseMarkers.FATAL, "Can't get the connection header response for rpc timeout, "
+           + "please check if server has the correct configuration to support the additional "
+@@ -641,8 +640,8 @@ class BlockingRpcConnection extends RpcConnection implements Runnable {
+     Call call = null;
+     boolean expectedCall = false;
+     try {
+-      // See HBaseServer.Call.setResponse for where we write out the response.
+-      // Total size of the response. Unused. But have to read it in anyways.
++        setupIOstreams();
++      
+       int totalSize = in.readInt();
+ 
+       // Read the header
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaConnectionPool.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaConnectionPool.java
+new file mode 100644
+index 0000000..5dac4cf
+--- /dev/null
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaConnectionPool.java
+@@ -0,0 +1,112 @@
++package org.apache.hadoop.hbase.ipc;
++
++import org.apache.hadoop.hbase.util.Pair;
++
++import java.util.HashMap;
++import org.apache.yetus.audience.InterfaceAudience;
++
++@InterfaceAudience.Public
++public class RdmaConnectionPool {
++    private RdmaNative rn;
++    
++    public RdmaConnectionPool(RdmaNative rni) {
++        rn = rni;
++        pool = new HashMap<>();
++    }
++    private HashMap<Pair<String, Integer>, Pair<RdmaNative.RdmaMuxedClientConnection, Integer>> pool;
++    // Acquire a connection to addr:port
++    public RdmaNative.RdmaMuxedClientConnection acquire(String addr, int port) throws RdmaConnectException{
++        Pair<String, Integer> pr = new Pair<>(addr, port);
++        if(pool.containsKey(pr)){
++            Pair<RdmaNative.RdmaMuxedClientConnection, Integer> rconn = pool.get(pr);
++            rconn.setSecond(rconn.getSecond() + 1);
++            return rconn.getFirst();
++        }
++        // we need to allocate new connection
++        RdmaNative.RdmaMuxedClientConnection rmcc = rn.muxedConnect(addr, port);
++        if(rmcc == null) throw new RdmaConnectException(addr, port);
++        Pair <RdmaNative.RdmaMuxedClientConnection, Integer> connref = new Pair<>(rmcc, 1);
++        pool.put(pr, connref);
++        return rmcc;
++    }
++    // release the connection acquired by acquire()
++    public void release(RdmaNative.RdmaMuxedClientConnection rmcc) throws IllegalArgumentException, RdmaReleaseException {
++        Pair<String, Integer> pr = new Pair<>(rmcc.addr, rmcc.port);
++        if(!(pool.containsKey(pr))) throw new IllegalArgumentException();
++        Pair <RdmaNative.RdmaMuxedClientConnection, Integer> connref = pool.get(pr);
++        if(connref.getSecond() <= 0) throw new RdmaReleaseException(rmcc.addr, rmcc.port);
++        connref.setSecond(connref.getSecond() - 1);
++    }
++    // release the connection acquired by acquire(), and if nobody continues reference it, close the connection
++    public void releaseAndClose(RdmaNative.RdmaMuxedClientConnection rmcc) throws IllegalArgumentException, RdmaReleaseException {
++        Pair<String, Integer> pr = new Pair<>(rmcc.addr, rmcc.port);
++        if(!(pool.containsKey(pr))) throw new IllegalArgumentException();
++        Pair <RdmaNative.RdmaMuxedClientConnection, Integer> connref = pool.get(pr);
++        if(connref.getSecond() <= 0) throw new RdmaReleaseException(rmcc.addr, rmcc.port);
++        if(connref.getSecond() == 1) {
++            rmcc.close();
++            pool.remove(pr);
++            return;
++        }
++        connref.setSecond(connref.getSecond() - 1);
++
++    }
++    // close every 0 reference connections in the pool, return how much connection closed
++    public int shrink() {
++        int relcount = 0;
++        for(HashMap.Entry<Pair<String, Integer>, Pair<RdmaNative.RdmaMuxedClientConnection, Integer>>
++                entry: pool.entrySet()){
++            if(entry.getValue().getSecond() == 0){
++                entry.getValue().getFirst().close();
++                pool.remove(entry.getKey());
++                relcount ++;
++            }
++        }
++        return relcount;
++    }
++    // enforcing the close of certain connection, regardless its reference counts
++    public void shutdown(String addr, int port) throws IllegalArgumentException {
++        Pair<String, Integer> pr = new Pair<>(addr, port);
++        if(!(pool.containsKey(pr))) throw new IllegalArgumentException();
++        Pair <RdmaNative.RdmaMuxedClientConnection, Integer> connref = pool.get(pr);
++        connref.getFirst().close();
++        pool.remove(pr);
++    }
++    public void shutdown(RdmaNative.RdmaMuxedClientConnection rmcc) throws IllegalArgumentException {
++        shutdown(rmcc.addr, rmcc.port);
++    }
++    // close every connection in the pool, and clean all entries from pool
++    public void finalize(){
++        for(HashMap.Entry<Pair<String, Integer>, Pair<RdmaNative.RdmaMuxedClientConnection, Integer>>
++                entry: pool.entrySet()){
++            entry.getValue().getFirst().close();
++        }
++        pool = new HashMap<>();
++    }
++    public class RdmaConnectException extends Exception{
++        private String addr;
++        private int port;
++        public RdmaConnectException(String iaddr, int iport){
++            addr = iaddr;
++            port = iport;
++        }
++        @Override
++        public String toString() {
++            return String.format("Rdma Connect to %s:%d failed.", addr, port);
++        }
++    }
++    public class RdmaReleaseException extends Exception {
++        private String addr;
++        private int port;
++        public RdmaReleaseException(String iaddr, int iport){
++            addr = iaddr;
++            port = iport;
++        }
++
++        @Override
++        public String toString() {
++            return String.format("Over-release on RDMA Connection -> %s:%d", addr, port);
++        }
++    }
++
++}
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java
+new file mode 100644
+index 0000000..aa16eef
+--- /dev/null
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java
+@@ -0,0 +1,118 @@
++package org.apache.hadoop.hbase.ipc;
++
++import org.apache.yetus.audience.InterfaceAudience;
++import java.nio.ByteBuffer;
++@InterfaceAudience.Public
++
++public class RdmaNative {
++    static {
++        System.err.println("Client Loading library and initing...");
++        System.loadLibrary("RdmaNative");
++        RdmaNative.rdmaInitGlobal();
++        // The kernel will cleanup all resources on exit. Use finalize() for another class in the future.
++    }
++    // This function must be called exactly once to construct necessary structs.
++    // It will construct rdmaContext and other global var.
++    public static native boolean rdmaInitGlobal();
++    // This function must be called exactly once to destruct global structs.
++    public static native void rdmaDestroyGlobal();
++    
++    // Connect to remote host. Blocked operation. If failed, return null.
++    public native RdmaClientConnection rdmaConnect(String addr, int port);
++    // This function must be called once by server, to bind a port.
++    public native boolean rdmaBind(int port);
++    // Wait and accept a connection. Blocked operation. If failed, return null.
++    public native RdmaServerConnection rdmaBlockedAccept();
++    
++        public class RdmaClientConnection {
++            private long ptrCxxClass;
++            private boolean ifInit = false;
++            public void init(){
++                this.ifInit= true;
++            }
++            public boolean ifInit(){
++                return this.ifInit;
++            }
++            public native boolean isClosed();
++            // returned ByteBuffer MAY be invalidated on next readResponse(). (invalidated if the bytebuffer is created without copying data)
++            // return null object if the read failed.
++            public native ByteBuffer readResponse(); // blocked. Will wait for the server for response.
++            public native boolean writeQuery(ByteBuffer data); // blocked until success.
++            public native boolean close(); // You may call it automatically in destructor. It MUST be called once.
++        }
++
++        public class RdmaMuxedClientConnection {
++            public String addr;
++            public int port;
++            private RdmaClientConnection rcc;
++            
++            public RdmaMuxedClientConnection(String iaddr, int iport) {
++                addr = iaddr;
++                port = iport;
++                rcc = rdmaConnect(addr, port);
++            }
++            public boolean isClosed() {
++                return rcc.isClosed();
++            }
++            public void init(){
++                rcc.init();
++            }
++            public boolean ifInit(){
++                return rcc.ifInit;
++            }
++            public ByteBuffer readResponse() {
++                return rcc.readResponse();
++            }
++            public boolean writeQuery(ByteBuffer data){
++                return rcc.writeQuery(data);
++            }
++            public boolean close() {
++                return rcc.close();
++            }
++        }
++
++        public RdmaMuxedClientConnection muxedConnect(String addr, int port){
++            return new RdmaMuxedClientConnection(addr, port);
++        }
++    
++        public class RdmaServerConnection {
++            /* 
++                The server holds two buffer. DynamicBufferTokenBuffer holds std::pair<Magic, DynamicBufferToken>, and DynamicBuffer
++                holds the real data. The Magic is inited to 0x00000000 and set to 0xffffffff if DynamicBufferToken is ready to use.
++                (For the initial 4K buffer, the magic is 0x00000000)
++
++                On accepting connection, the server creates a 4K DynamicBuffer, and register it, put the token into DynamicBufferTokenBuffer.
++            begin:
++                DynamicBufferTokenBuffer has 3 area: magic, currentQuerySize, and DynamicBufferToken.
++                Then the server send the DynamicBufferTokenBufferToken to client as userData. Then the client write its querySize into 
++                DynamicBufferTokenBuffer. On server calling isQueryReadable(), it allocates the buffer if querySize available.
++                If the client's query size is less than current DynamicBufferSize, it just write it in the existing dynamic buffer. 
++                If the query is larger, the client must read DynamicBufferTokenBuffer again and again, until the Magic is NOT 0x00000000. 
++                Then write the query in.
++                If the query is larger, the server must resize and re-register the DynamicBuffer, put its new token into 
++                DynamicBufferTokenBuffer, and set the Magic to 0xffffffff.
++                
++                Once the query is wrote into server, the client must set Magic to 0xaaaaaaaa(use compareAndSwap, if possible. It doesn't matter).
++                The server call isQueryReadable() to check if the Magic is 0xaaaaaaaa. 
++
++                After the response is ready, the server use writeResponse to write its data to local buffer. (In fact, the memory in ByteBuffer maybe 
++                used and prevent its GC). The DynamicBufferToken is updated, then the Magic is set to 0x55555555. The client check the value again
++                and again. Once available, the client can get the response.
++
++                I have not consider how should I close the connection. Maybe just destruct the Rdma*Connection, and destruct the insiding C++ QP. 
++                If we want to reuse the connection in the future, just leave the connection there and the server use current DynamicBuffer as initial
++                buffer, goto begin;
++            */
++            private long ptrCxxClass;
++    
++            public native boolean isClosed();
++            public native boolean isQueryReadable();
++            // get client ip address. ipv6 is not tested yet. (code for ipv6 maybe buggy)
++            public native byte [] getClientIp();
++            // returned ByteBuffer MAY be invalidated on next readQuery()
++            // return null object if the read failed.
++            public native ByteBuffer readQuery();
++            public native boolean writeResponse(ByteBuffer data);
++            public native boolean close(); // You may call it automatically in destructor. It MUST be called once.
++        }
++    }
+diff --git a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RpcClientFactory.java b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RpcClientFactory.java
+index b6f9e38..87122a7 100644
+--- a/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RpcClientFactory.java
++++ b/hbase-client/src/main/java/org/apache/hadoop/hbase/ipc/RpcClientFactory.java
+@@ -47,8 +47,8 @@ public final class RpcClientFactory {
+ 
+   /** Helper method for tests only. Creates an {@code RpcClient} without metrics. */
+   @VisibleForTesting
+-  public static RpcClient createClient(Configuration conf, String clusterId) {
+-    return createClient(conf, clusterId, null);
++  public static RpcClient createClient(Configuration conf, String clusterId,boolean isRdma) {
++    return createClient(conf, clusterId, null,isRdma);
+   }
+ 
+   /**
+@@ -60,33 +60,40 @@ public final class RpcClientFactory {
+    * @return newly created RpcClient
+    */
+   public static RpcClient createClient(Configuration conf, String clusterId,
+-      MetricsConnection metrics) {
+-    return createClient(conf, clusterId, null, metrics);
++      MetricsConnection metrics,boolean isRdma) {
++    return createClient(conf, clusterId, null, metrics,isRdma);
+   }
+ 
+   private static String getRpcClientClass(Configuration conf) {
+     String rpcClientClass = conf.get(CUSTOM_RPC_CLIENT_IMPL_CONF_KEY);
+     if (rpcClientClass == null) {
+-      return NettyRpcClient.class.getName();
++      // return NettyRpcClient.class.getName();
++      return BlockingRpcClient.class.getName(); // recolic: use simple rpc cli
+     }
+     String mappedName = DEPRECATED_NAME_MAPPING.get(rpcClientClass);
+     return mappedName == null ? rpcClientClass : mappedName;
+   }
+ 
+-  /**
+-   * Creates a new RpcClient by the class defined in the configuration or falls back to
+-   * RpcClientImpl
+-   * @param conf configuration
+-   * @param clusterId the cluster id
+-   * @param localAddr client socket bind address.
+-   * @param metrics the connection metrics
+-   * @return newly created RpcClient
+-   */
+-  public static RpcClient createClient(Configuration conf, String clusterId,
+-      SocketAddress localAddr, MetricsConnection metrics) {
+-    String rpcClientClass = getRpcClientClass(conf);
+-    return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
+-        Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
+-      new Object[] { conf, clusterId, localAddr, metrics });
+-  }
++
++private static String getRDMARpcClientClass(Configuration conf) {
++    return BlockingRDMARpcClient.class.getName(); // recolic: use simple rpc cli
++}
++
++/**
++ * Creates a new RpcClient by the class defined in the configuration or falls back to
++ * RpcClientImpl
++ * @param conf configuration
++ * @param clusterId the cluster id
++ * @param localAddr client socket bind address.
++ * @param metrics the connection metrics
++ * @return newly created RpcClient
++ */
++public static RpcClient createClient(Configuration conf, String clusterId,
++    SocketAddress localAddr, MetricsConnection metrics,boolean isRdma) {
++      //String rpcClientClass = getRDMARpcClientClass(conf);
++  String rpcClientClass = isRdma?getRDMARpcClientClass(conf):getRpcClientClass(conf);
++  return ReflectionUtils.instantiateWithCustomCtor(rpcClientClass, new Class[] {
++      Configuration.class, String.class, SocketAddress.class, MetricsConnection.class },
++    new Object[] { conf, clusterId, localAddr, metrics });
+ }
++}
+\ No newline at end of file
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/BufferChain.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/BufferChain.java
+index 915b82d..751d02f 100644
+--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/BufferChain.java
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/BufferChain.java
+@@ -58,6 +58,24 @@ class BufferChain {
+     }
+     return bytes;
+   }
++  
++  //concat with end of stream at each 
++  ByteBuffer concat() {
++    int length = 0;
++    for (ByteBuffer bb : buffers) {
++      bb.rewind();
++      length += bb.remaining();
++    }
++    ByteBuffer bbNew = ByteBuffer.allocateDirect((int) length);
++
++    // put all buffers from list
++    for (ByteBuffer bb : buffers) {
++      bb.rewind();
++      bbNew.put(bb);
++    }
++    bbNew.rewind();
++    return bbNew;
++  }
+ 
+   boolean hasRemaining() {
+     return remaining > 0;
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java
+new file mode 100644
+index 0000000..1a8c5d8
+--- /dev/null
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RdmaNative.java
+@@ -0,0 +1,85 @@
++package org.apache.hadoop.hbase.ipc;
++
++import org.apache.yetus.audience.InterfaceAudience;
++import java.nio.ByteBuffer;
++@InterfaceAudience.Public
++
++public class RdmaNative {
++    static {
++        System.err.println("Server Loading library and initing...");
++        System.loadLibrary("RdmaNative");
++        RdmaNative.rdmaInitGlobal();
++        // The kernel will cleanup all resources on exit. Use finalize() for another class in the future.
++    }
++    // This function must be called exactly once to construct necessary structs.
++    // It will construct rdmaContext and other global var.
++    public static native boolean rdmaInitGlobal();
++    // This function must be called exactly once to destruct global structs.
++    public static native void rdmaDestroyGlobal();
++    
++    // Connect to remote host. Blocked operation. If failed, return null.
++    public native RdmaClientConnection rdmaConnect(String addr, int port);
++    // This function must be called once by server, to bind a port.
++    public native boolean rdmaBind(int port);
++    // Wait and accept a connection. Blocked operation. If failed, return null.
++    public native RdmaServerConnection rdmaBlockedAccept();
++    
++        public class RdmaClientConnection {
++            private long ptrCxxClass;
++            private boolean ifInit = false;
++            public void init(){
++                this.ifInit= true;
++            }
++            public boolean ifInit(){
++                return this.ifInit;
++            }
++    
++            public native boolean isClosed();
++            // returned ByteBuffer MAY be invalidated on next readResponse(). (invalidated if the bytebuffer is created without copying data)
++            // return null object if the read failed.
++            public native ByteBuffer readResponse(); // blocked. Will wait for the server for response.
++            public native boolean writeQuery(ByteBuffer data); // blocked until success.
++            public native boolean close(); // You may call it automatically in destructor. It MUST be called once.
++        }
++    
++        public class RdmaServerConnection {
++            /* 
++                The server holds two buffer. DynamicBufferTokenBuffer holds std::pair<Magic, DynamicBufferToken>, and DynamicBuffer
++                holds the real data. The Magic is inited to 0x00000000 and set to 0xffffffff if DynamicBufferToken is ready to use.
++                (For the initial 4K buffer, the magic is 0x00000000)
++
++                On accepting connection, the server creates a 4K DynamicBuffer, and register it, put the token into DynamicBufferTokenBuffer.
++            begin:
++                DynamicBufferTokenBuffer has 3 area: magic, currentQuerySize, and DynamicBufferToken.
++                Then the server send the DynamicBufferTokenBufferToken to client as userData. Then the client write its querySize into 
++                DynamicBufferTokenBuffer. On server calling isQueryReadable(), it allocates the buffer if querySize available.
++                If the client's query size is less than current DynamicBufferSize, it just write it in the existing dynamic buffer. 
++                If the query is larger, the client must read DynamicBufferTokenBuffer again and again, until the Magic is NOT 0x00000000. 
++                Then write the query in.
++                If the query is larger, the server must resize and re-register the DynamicBuffer, put its new token into 
++                DynamicBufferTokenBuffer, and set the Magic to 0xffffffff.
++                
++                Once the query is wrote into server, the client must set Magic to 0xaaaaaaaa(use compareAndSwap, if possible. It doesn't matter).
++                The server call isQueryReadable() to check if the Magic is 0xaaaaaaaa. 
++
++                After the response is ready, the server use writeResponse to write its data to local buffer. (In fact, the memory in ByteBuffer maybe 
++                used and prevent its GC). The DynamicBufferToken is updated, then the Magic is set to 0x55555555. The client check the value again
++                and again. Once available, the client can get the response.
++
++                I have not consider how should I close the connection. Maybe just destruct the Rdma*Connection, and destruct the insiding C++ QP. 
++                If we want to reuse the connection in the future, just leave the connection there and the server use current DynamicBuffer as initial
++                buffer, goto begin;
++            */
++            private long ptrCxxClass;
++    
++            public native boolean isClosed();
++            public native boolean isQueryReadable();
++            // get client ip address. ipv6 is not tested yet. (code for ipv6 maybe buggy)
++            public native byte [] getClientIp();
++            // returned ByteBuffer MAY be invalidated on next readQuery()
++            // return null object if the read failed.
++            public native ByteBuffer readQuery();
++            public native boolean writeResponse(ByteBuffer data);
++            public native boolean close(); // You may call it automatically in destructor. It MUST be called once.
++        }
++    }
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServerFactory.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServerFactory.java
+index 298b472..d65cf8a 100644
+--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServerFactory.java
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/RpcServerFactory.java
+@@ -54,7 +54,8 @@ public class RpcServerFactory {
+       final InetSocketAddress bindAddress, Configuration conf,
+       RpcScheduler scheduler, boolean reservoirEnabled) throws IOException {
+     String rpcServerClass = conf.get(CUSTOM_RPC_SERVER_IMPL_CONF_KEY,
+-        NettyRpcServer.class.getName());
++        //NettyRpcServer.class.getName());
++        SimpleRpcServer.class.getName()); // recolic: use simple rpc.
+     StringBuilder servicesList = new StringBuilder();
+     for (BlockingServiceAndInterface s: services) {
+       ServiceDescriptor sd = s.getBlockingService().getDescriptorForType();
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/ServerCall.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/ServerCall.java
+index cf1cf9a..7c8d336 100644
+--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/ServerCall.java
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/ServerCall.java
+@@ -55,6 +55,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
+ 
+   protected final int id;                             // the client's call id
+   protected final BlockingService service;
++  protected final boolean isRdma;
+   protected final MethodDescriptor md;
+   protected final RequestHeader header;
+   protected Message param;                      // the parameter passed
+@@ -104,6 +105,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
+     this.param = param;
+     this.cellScanner = cellScanner;
+     this.connection = connection;
++    this.isRdma= false;
+     this.receiveTime = receiveTime;
+     this.response = null;
+     this.isError = false;
+@@ -184,6 +186,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
+   @Override
+   public synchronized void setResponse(Message m, final CellScanner cells,
+       Throwable t, String errorMsg) {
++        //RpcServer.LOG.warn("RDMA debug called  setResponse");
+     if (this.isError) return;
+     if (t != null) this.isError = true;
+     BufferChain bc = null;
+@@ -199,22 +202,22 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
+       // high when we can avoid a big buffer allocation on each rpc.
+       List<ByteBuffer> cellBlock = null;
+       int cellBlockSize = 0;
+-      if (this.reservoir != null) {
+-        this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.connection.codec,
+-          this.connection.compressionCodec, cells, this.reservoir);
+-        if (this.cellBlockStream != null) {
+-          cellBlock = this.cellBlockStream.getByteBuffers();
+-          cellBlockSize = this.cellBlockStream.size();
++        if (this.reservoir != null) {
++          this.cellBlockStream = this.cellBlockBuilder.buildCellBlockStream(this.connection.codec,
++            this.connection.compressionCodec, cells, this.reservoir);
++          if (this.cellBlockStream != null) {
++            cellBlock = this.cellBlockStream.getByteBuffers();
++            cellBlockSize = this.cellBlockStream.size();
++          }
++        } else {
++          ByteBuffer b = this.cellBlockBuilder.buildCellBlock(this.connection.codec,
++            this.connection.compressionCodec, cells);
++          if (b != null) {
++            cellBlockSize = b.remaining();
++            cellBlock = new ArrayList<>(1);
++            cellBlock.add(b);
++          }
+         }
+-      } else {
+-        ByteBuffer b = this.cellBlockBuilder.buildCellBlock(this.connection.codec,
+-          this.connection.compressionCodec, cells);
+-        if (b != null) {
+-          cellBlockSize = b.remaining();
+-          cellBlock = new ArrayList<>(1);
+-          cellBlock.add(b);
+-        }
+-      }
+ 
+       if (cellBlockSize > 0) {
+         CellBlockMeta.Builder cellBlockBuilder = CellBlockMeta.newBuilder();
+@@ -240,9 +243,12 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
+         }
+       }
+       bc = new BufferChain(responseBufs);
+-      if (connection.useWrap) {
+-        bc = wrapWithSasl(bc);
++      if(!(this.isRdma)){//no support for Sasl in rdma
++        if (connection.useWrap) {
++          bc = wrapWithSasl(bc);
++        }
+       }
++
+     } catch (IOException e) {
+       RpcServer.LOG.warn("Exception while creating response " + e);
+     }
+@@ -439,7 +445,7 @@ abstract class ServerCall<T extends ServerRpcConnection> implements RpcCall, Rpc
+   }
+ 
+   @Override
+-  public InetAddress getRemoteAddress() {
++  public InetAddress getRemoteAddress() {//TODO Y00
+     return remoteAddress;
+   }
+ 
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRdmaServerCall.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRdmaServerCall.java
+new file mode 100644
+index 0000000..28c9263
+--- /dev/null
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRdmaServerCall.java
+@@ -0,0 +1,79 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hbase.ipc;
++
++import java.io.IOException;
++import java.net.InetAddress;
++
++import org.apache.hadoop.hbase.CellScanner;
++import org.apache.yetus.audience.InterfaceAudience;
++import org.apache.hadoop.hbase.io.ByteBufferPool;
++import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
++import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
++import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
++import org.apache.hbase.thirdparty.com.google.protobuf.Message;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
++
++/**
++ * Datastructure that holds all necessary to a method invocation and then afterward, carries the
++ * result.
++ */
++@InterfaceAudience.Private
++class SimpleRdmaServerCall extends ServerCall<SimpleServerRdmaRpcConnection> {
++
++  //final SimpleRpcServerRdmaResponder rdmaresponder;
++
++  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "NP_NULL_ON_SOME_PATH",
++      justification = "Can't figure why this complaint is happening... see below")
++
++
++  SimpleRdmaServerCall(int id, final BlockingService service, final MethodDescriptor md, 
++      RequestHeader header, Message param, CellScanner cellScanner, 
++      SimpleServerRdmaRpcConnection rdmaconnection, long size,
++      final InetAddress remoteAddress, long receiveTime, int timeout, ByteBufferPool reservoir,
++      CellBlockBuilder cellBlockBuilder, CallCleanup reqCleanup) {
++    super(id, service, md, header, param, cellScanner, rdmaconnection, size, remoteAddress, receiveTime, timeout,
++        reservoir, cellBlockBuilder, reqCleanup);
++    //SimpleRpcServer.LOG.info("RDMASrvCall -> ctor()");
++
++  }
++
++  /**
++   * Call is done. Execution happened and we returned results to client. It is now safe to cleanup.
++   */
++  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "IS2_INCONSISTENT_SYNC",
++      justification = "Presume the lock on processing request held by caller is protection enough")
++  @Override
++  public void done() {
++    super.done();
++    this.getConnection().decRpcCount(); // Say that we're done with this call.
++  }
++
++  @Override
++  public synchronized void sendResponseIfReady() throws IOException {
++    // set param null to reduce memory pressure
++    this.param = null;
++      //SimpleRpcServer.LOG.info("RDMASrvCall sendResponseIfReady() -> RDMARpcConn processResponse(this)");
++      SimpleServerRdmaRpcConnection.processResponse(this.connection,this);
++
++  }
++
++  SimpleServerRdmaRpcConnection getConnection() {
++    return this.connection;
++  }
++}
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRpcServer.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRpcServer.java
+index 13a3cf7..76e53aa 100644
+--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRpcServer.java
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleRpcServer.java
+@@ -41,6 +41,7 @@ import java.util.concurrent.Executors;
+ import java.util.concurrent.LinkedBlockingQueue;
+ import java.util.concurrent.atomic.AtomicInteger;
+ 
++//import com.oracle.tools.packager.Log;
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.hbase.CellScanner;
+ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
+@@ -83,19 +84,29 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
+  */
+ @InterfaceAudience.LimitedPrivate({HBaseInterfaceAudience.CONFIG})
+ public class SimpleRpcServer extends RpcServer {
++  private  RdmaNative rdma =null;
++
++      //TODO isRdma get from conf
++      
+ 
+   protected int port;                             // port we listen on
++  protected int rdmaPort;//rdma listener port
+   protected InetSocketAddress address;            // inet address we listen on
+   private int readThreads;                        // number of read threads
+ 
++
+   protected int socketSendBufferSize;
+   protected final long purgeTimeout;    // in milliseconds
+ 
+   // maintains the set of client connections and handles idle timeouts
+   private ConnectionManager connectionManager;
+   private Listener listener = null;
++  private RdmaListener rdmalistener = null;
+   protected SimpleRpcServerResponder responder = null;
+ 
++  // public String getHostAddr(){
++  //   return listener.acceptChannel.hostAddress;
++  // }
+   /** Listens on the socket. Creates jobs for the handler threads*/
+   private class Listener extends Thread {
+ 
+@@ -107,6 +118,7 @@ public class SimpleRpcServer extends RpcServer {
+ 
+     private ExecutorService readPool;
+ 
++
+     public Listener(final String name) throws IOException {
+       super(name);
+       // The backlog of requests that we will have the serversocket carry.
+@@ -185,6 +197,7 @@ public class SimpleRpcServer extends RpcServer {
+               iter.remove();
+               if (key.isValid()) {
+                 if (key.isReadable()) {
++                  //LOG.warn("normal reader doread");
+                   doRead(key);
+                 }
+               }
+@@ -364,6 +377,150 @@ public class SimpleRpcServer extends RpcServer {
+       return readers[currentReader];
+     }
+   }
++  private class RdmaListener extends Thread {
++
++    private Reader[] readers = null;
++    private int currentReader = 0;
++    private final int readerPendingConnectionQueueLength;
++
++    private ExecutorService readPool;
++
++    public RdmaListener(final String name, final int rdmaport) throws IOException {
++      super(name);
++      
++      // The backlog of requests that we will have the serversocket carry.
++      int backlogLength = conf.getInt("hbase.ipc.server.listen.queue.size", 128);
++      readerPendingConnectionQueueLength =
++          conf.getInt("hbase.ipc.server.read.connection-queue.size", 100);
++      // Create a new server socket and set to non blocking mode
++
++      if(port!=16020){//only for regionserver
++        LOG.info("drop for the not regionserver"+name);
++        return;
++      }
++      //LOG.warn("Server Loading the rdmalib");
++      rdma= new RdmaNative();
++      //LOG.warn("Server bind! the rdmalib");
++      rdma.rdmaBind(rdmaport);
++
++      readers = new Reader[readThreads];
++      // Why this executor thing? Why not like hadoop just start up all the threads? I suppose it
++      // has an advantage in that it is easy to shutdown the pool.
++      readPool = Executors.newFixedThreadPool(readThreads,
++        new ThreadFactoryBuilder().setNameFormat(
++          "Reader=%d,bindAddress=" + bindAddress.getHostName() +
++          ",port=" + port).setDaemon(true)
++        .setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
++      for (int i = 0; i < readThreads; ++i) {
++        Reader reader = new Reader();
++        readers[i] = reader;
++        readPool.execute(reader);
++      }
++      LOG.info("rdmaListener: started " + readThreads + " reader(s) listening on port=" + rdmaPort);
++
++      // Register accepts on the server socket with the selector.
++      //acceptChannel.register(selector, SelectionKey.OP_ACCEPT);
++      this.setName("RdmaListener,port=" + rdmaPort);
++      this.setDaemon(true);
++    }
++
++
++    private class Reader implements Runnable {
++      final private LinkedBlockingQueue<SimpleServerRdmaRpcConnection> pendingConnections;
++      //private final Selector readSelector;
++
++      Reader() throws IOException {
++        this.pendingConnections = new LinkedBlockingQueue<>(readerPendingConnectionQueueLength);
++        //this.readSelector = Selector.open();
++      }
++
++      @Override
++      public void run() {
++        SimpleRpcServer.LOG.info("RDMA reader starting");
++          doRunLoop();
++      }
++
++      private synchronized void doRunLoop() {
++        while (running) {
++          try {
++            //LOG.warn("RDMA reader running");
++            Iterator<SimpleServerRdmaRpcConnection> iter = pendingConnections.iterator();
++            while (iter.hasNext()) {
++              //LOG.warn("RDMA reader running");
++              SimpleServerRdmaRpcConnection  rdma_conn= iter.next();
++                if (rdma_conn.isReadable()) {
++                  doRead(rdma_conn);
++                  //closeRdmaConnection(rdma_conn);
++                  //iter.remove();//just close it
++                }
++            }
++          } catch (InterruptedException e) {
++            if (running) {                      // unexpected -- log it
++              LOG.info(Thread.currentThread().getName() + " unexpectedly interrupted RDMA", e);
++            }
++          } catch (CancelledKeyException e) {
++            LOG.error(getName() + ": CancelledKeyException in RDMA Reader", e);
++          } 
++        }
++      }
++      void doRead(SimpleServerRdmaRpcConnection c) throws InterruptedException {
++        //SimpleRpcServer.LOG.warn("RDMA  reader doRead");
++        int count;
++        if (c == null) {
++          return;
++        }
++        c.setLastContact(System.currentTimeMillis());
++        try {
++          count = c.readAndProcess();
++        } catch (InterruptedException ieo) {
++          LOG.info(Thread.currentThread().getName() + ": RDMA readAndProcess caught InterruptedException", ieo);
++          throw ieo;
++        } catch (Exception e) {
++          if (LOG.isDebugEnabled()) {
++            LOG.debug("Caught exception while readAndProcess RDMA:", e);
++          }
++          count = -1; //so that the (count < 0) block is executed
++        }
++        if (count < 0) {
++          closeRdmaConnection(c);
++          c = null;
++        } else {
++          c.setLastContact(System.currentTimeMillis());
++        }
++      }
++
++    }
++
++    @Override
++    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value="IS2_INCONSISTENT_SYNC",
++      justification="selector access is not synchronized; seems fine but concerned changing " +
++        "it will have per impact")
++    public void run() {
++      SimpleRpcServer.LOG.info("RDMA listener start and bind at port "+ rdmaPort+" this rpcserver is at port "+port);
++      int i=1;
++      while (running) {
++        SimpleServerRdmaRpcConnection rdma_conn=getRdmaConnection(rdmaPort,System.currentTimeMillis());
++        this.readers[i].pendingConnections.add(rdma_conn);
++      SimpleRpcServer.LOG.info("RDMA listener add a conn to reader "+ i);
++      //   synchronized (this.readers[i].lock) {  should we add a lock????
++      //     this.readers[i].lock.notify();
++      // }
++      i++;
++      i = i % readThreads ;//add in a round robin way  
++
++      }
++      LOG.info(getName() + ": stopping");
++      doStop();      
++    }
++
++
++    synchronized void doStop() {
++      SimpleRpcServer.LOG.warn("RDMA listener doStop");
++      readPool.shutdownNow();
++    }
++
++
++  }
+ 
+   /**
+    * Constructs a server listening on the named port and address.
+@@ -389,10 +546,15 @@ public class SimpleRpcServer extends RpcServer {
+     // Start the listener here and let it bind to the port
+     listener = new Listener(name);
+     this.port = listener.getAddress().getPort();
++    if(this.port==16020){
++      this.rdmaPort=port+1;
++        rdmalistener = new RdmaListener(name, rdmaPort);
++      
++    }
+ 
+     // Create the responder here
+     responder = new SimpleRpcServerResponder(this);
+-    connectionManager = new ConnectionManager();
++    connectionManager = new ConnectionManager(); 
+     initReconfigurable(conf);
+ 
+     this.scheduler.init(new RpcSchedulerContext(this));
+@@ -405,9 +567,18 @@ public class SimpleRpcServer extends RpcServer {
+   protected SimpleServerRpcConnection getConnection(SocketChannel channel, long time) {
+     return new SimpleServerRpcConnection(this, channel, time);
+   }
+-
++  protected SimpleServerRdmaRpcConnection getRdmaConnection(int port, long time) {
++    return new SimpleServerRdmaRpcConnection(this,port, time);
++  }
+   protected void closeConnection(SimpleServerRpcConnection connection) {
+-    connectionManager.close(connection);
++    connectionManager.close(connection); 
++  }
++
++  protected static void closeRdmaConnection(SimpleServerRdmaRpcConnection connection) {
++    if(!connection.rdmaconn.close())
++    {
++      LOG.warn("RDMA close failed L583");
++    }
+   }
+ 
+   /** Sets the socket buffer size used for responding to RPCs.
+@@ -429,6 +600,10 @@ public class SimpleRpcServer extends RpcServer {
+     HBasePolicyProvider.init(conf, authManager);
+     responder.start();
+     listener.start();
++    if(this.port==16020){
++      rdmalistener.start();
++    }
++    
+     scheduler.start();
+     started = true;
+   }
+@@ -444,6 +619,8 @@ public class SimpleRpcServer extends RpcServer {
+     }
+     listener.interrupt();
+     listener.doStop();
++    rdmalistener.interrupt();
++    rdmalistener.doStop();
+     responder.interrupt();
+     scheduler.stop();
+     notifyAll();
+@@ -488,7 +665,7 @@ public class SimpleRpcServer extends RpcServer {
+       Message param, CellScanner cellScanner, long receiveTime, MonitoredRPCHandler status,
+       long startTime, int timeout) throws IOException {
+     SimpleServerCall fakeCall = new SimpleServerCall(-1, service, md, null, param, cellScanner,
+-        null, -1, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, null);
++        null, -1, null, receiveTime, timeout, reservoir, cellBlockBuilder, null, responder);
+     return call(fakeCall, status);
+   }
+ 
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleServerRdmaRpcConnection.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleServerRdmaRpcConnection.java
+new file mode 100644
+index 0000000..3bcb114
+--- /dev/null
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/ipc/SimpleServerRdmaRpcConnection.java
+@@ -0,0 +1,378 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hbase.ipc;
++
++import java.io.DataInputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.net.InetAddress;
++import java.nio.ByteBuffer;
++import java.util.concurrent.ConcurrentLinkedDeque;
++import java.util.concurrent.atomic.LongAdder;
++import java.util.concurrent.locks.Lock;
++import java.util.concurrent.locks.ReentrantLock;
++import java.nio.charset.StandardCharsets;
++import org.apache.hadoop.hbase.CellScanner;
++import org.apache.hadoop.hbase.DoNotRetryIOException;
++import org.apache.yetus.audience.InterfaceAudience;
++import org.apache.hadoop.hbase.client.VersionInfoUtil;
++import org.apache.hadoop.hbase.exceptions.RequestTooBigException;
++import org.apache.hadoop.hbase.ipc.RpcServer.CallCleanup;
++import org.apache.hadoop.hbase.nio.ByteBuff;
++import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
++//import org.apache.hadoop.hbase.io.ByteArrayInputStream;
++import java.io.ByteArrayInputStream; 
++import java.io.BufferedInputStream;
++import java.io.BufferedOutputStream;
++import java.io.DataInputStream;
++import java.io.OutputStream;
++import java.io.InputStream;
++import java.io.DataOutputStream;
++import org.apache.hadoop.hbase.nio.SingleByteBuff;
++import org.apache.hbase.thirdparty.com.google.protobuf.BlockingService;
++import org.apache.hbase.thirdparty.com.google.protobuf.CodedInputStream;
++import org.apache.hbase.thirdparty.com.google.protobuf.Descriptors.MethodDescriptor;
++import org.apache.hbase.thirdparty.com.google.protobuf.Message;
++import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
++import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
++import org.apache.hadoop.hbase.util.Pair;
++
++/** Reads calls from a connection and queues them for handling. */
++@edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT",
++    justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
++@InterfaceAudience.Private
++class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
++
++
++  private RdmaNative rdma= new RdmaNative();
++  public  RdmaNative.RdmaServerConnection rdmaconn;//the core of the rdmaconn class TODO init  these two
++  private ByteBuff data;
++  private byte[] arr;
++  private int oldDataLength;
++  private ByteBuffer dataLengthBuffer;
++  private ByteBuffer preambleBuffer;
++  private ByteBuffer rbuf;
++  private DataInputStream rdma_in;
++  private final LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
++  private long lastContact;
++  //final SimpleRpcServerRdmaResponder rdmaresponder;
++  //final RdmaHandler rdmahandler;
++
++  // If initial preamble with version and magic has been read or not.
++  private boolean connectionPreambleRead = true;//we drop it in rdma
++
++  final ConcurrentLinkedDeque<RpcResponse> responseQueue = new ConcurrentLinkedDeque<>();
++  final Lock responseWriteLock = new ReentrantLock();
++  long lastSentTime = -1L;
++
++  public SimpleServerRdmaRpcConnection(SimpleRpcServer rpcServer,int port,
++      long lastContact) {
++    super(rpcServer);
++    this.lastContact = lastContact;
++    this.connectionHeaderRead=false;
++    this.data = null;
++    this.dataLengthBuffer = ByteBuffer.allocate(4);
++    this.oldDataLength=0;
++    this.arr=null;
++    
++    this.hostAddress ="0.0.0.0";// rpcServer.getHostAddr();//tmp fix
++    try {
++      this.addr=InetAddress.getByName(this.hostAddress);
++    } catch (Exception e) {
++      SimpleRpcServer.LOG.warn("RDMARpcConn init addr failed.");
++    }
++    this.remotePort = port;
++    do this.rdmaconn = rdma.rdmaBlockedAccept();
++         while (this.rdmaconn==null);  
++    SimpleRpcServer.LOG.info("RDMARpcConn rdmaAccept <- "+rdmaconn.getClientIp().toString());
++  }
++
++  public void setLastContact(long lastContact) {
++    this.lastContact = lastContact;
++  }
++
++  public long getLastContact() {
++    return lastContact;
++  }
++
++  /* Return true if the connection has no outstanding rpc */
++  boolean isIdle() {
++    return rpcCount.sum() == 0;
++  }
++// if it is readable , then just read into the rbuf
++  boolean isReadable(){
++    if (rdmaconn.isQueryReadable()) {
++      this.rbuf=rdmaconn.readQuery();
++      this.rbuf.rewind();
++      //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
++      //SimpleRpcServer.LOG.debug("RDMARpcConn isReadable <- rbuf("
++      //+rbuf.remaining() +", "+ StandardCharsets.UTF_8.decode(rbuf).toString() + ")");
++      return true;
++    } else {
++       //SimpleRpcServer.LOG.debug("RDMARpcConn not Readable");
++      return false;
++    }
++  }
++  /* Decrement the outstanding RPC count */
++  protected void decRpcCount() {
++    rpcCount.decrement();
++  }
++
++  /* Increment the outstanding RPC count */
++  protected void incRpcCount() {
++    rpcCount.increment();
++  }
++
++
++  public static int bufcopy(ByteBuffer src, ByteBuffer dst){
++    int i=0;
++    while (src.hasRemaining()&&dst.hasRemaining())
++    {dst.put(src.get()); 
++    i++;}
++    return i;
++  }
++
++  private int readPreamble() throws IOException {
++    if (preambleBuffer == null) {
++      preambleBuffer = ByteBuffer.allocate(6);
++    }
++    preambleBuffer.rewind(); 
++    int count = bufcopy(rbuf, preambleBuffer);
++    //SimpleRpcServer.LOG.debug("RDMARpcConn readPreamble() <- count "+ count+" preambleBuffer "+preambleBuffer);
++    if (count < 0 || preambleBuffer.remaining() > 0) {
++      //SimpleRpcServer.LOG.warn("RDMARpcConn readPreamble() -> bufcopy() failed.");
++      return count;
++    }
++    preambleBuffer.flip();
++    if (!processPreamble(preambleBuffer)) {
++      //SimpleRpcServer.LOG.warn("RDMARpcConn readPreamble() -> processPreamble() failed.");
++      return -1;
++    }
++    preambleBuffer = null; // do not need it anymore
++    connectionPreambleRead = true;
++    return count;
++  }
++
++  private int read4Bytes() throws IOException {
++    //if (this.dataLengthBuffer.remaining() > 0) {
++      return bufcopy(rbuf, this.dataLengthBuffer);
++    //} else {
++    //  return 0;
++    //}
++  }
++
++  /**
++   * Read off the wire. If there is not enough data to read, update the connection state with what
++   * we have and returns.
++   * @return Returns -1 if failure (and caller will close connection), else zero or more.
++   * @throws IOException
++   * @throws InterruptedException
++   */
++  public int readAndProcess() throws IOException, InterruptedException {
++    //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() invoked.");
++
++    if (!connectionHeaderRead)// force drop the conn header after first rbuf
++    //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() detected header not read.");
++
++    rbuf.rewind();
++    dataLengthBuffer.rewind();
++    // Try and read in an int. it will be length of the data to read (or -1 if a ping). We catch the
++    // integer length into the 4-byte this.dataLengthBuffer.
++    int count = read4Bytes();
++    //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() -> read4Bytes() -> "+ count);
++    if (count < 0 || dataLengthBuffer.remaining() > 0) {
++      //SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> read4Bytes() Failed.");
++      return count;
++    }
++
++    //if (data == null) { //TODO always init the data buffer? Y00
++      dataLengthBuffer.flip();
++      int dataLength = dataLengthBuffer.getInt();
++      //SimpleRpcServer.LOG.debug("RDMARpcConn readAndProcess() -> dataLength "+ dataLength);
++      int realDataLength=rbuf.remaining();
++
++      if(oldDataLength<dataLength | data==null){
++        SimpleRpcServer.LOG.error("init data! ");
++      initByteBuffToReadInto(dataLength);
++      this.arr = new byte[dataLength];
++      this.oldDataLength=dataLength;
++      }
++      incRpcCount();
++
++      //SimpleRpcServer.LOG.debug("RDMARpcConn readAndProcess() -> rbuf remaining " + rbuf.remaining());
++      
++      rbuf.get(arr);
++      data.put(arr, 0, dataLength);// debug
++      
++      //SimpleRpcServer.LOG.debug("RDMARpcConn readAndProcess() -> rbuf -> "+
++      //StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
++      if (realDataLength>dataLength)
++      {
++        connectionHeaderRead=false;//force it to read the head
++      }
++      process();
++
++
++      if (realDataLength>dataLength) {
++        //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() read header done, continue to remain");
++        //if (!connectionHeaderRead)// force drop the conn header after first rbuf
++        //  SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() header not read !?");
++        
++        int trueDataLength = realDataLength - dataLength ;
++        if(oldDataLength<trueDataLength | data==null){
++          SimpleRpcServer.LOG.error("re init data! ");
++        initByteBuffToReadInto(trueDataLength);
++        arr = new byte[trueDataLength];
++        this.oldDataLength=trueDataLength;
++        }
++
++        incRpcCount();
++        
++        rbuf.get(arr);//read the left things
++        data.put(arr, 4, trueDataLength - 4);//drop the first int
++        //SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> rbuf -> "+
++          //      StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
++        process();
++    }
++    //SimpleRpcServer.LOG.info("RDMA readAndProcess done");
++
++    return dataLength;//return what we've read if -1, we will close it
++  }
++
++  // It creates the ByteBuff and CallCleanup and assign to Connection instance.
++  private void initByteBuffToReadInto(int length) {
++    // We create random on heap buffers are read into those when
++    // 1. ByteBufferPool is not there.
++    // 2. When the size of the req is very small. Using a large sized (64 KB) buffer from pool is
++    // waste then. Also if all the reqs are of this size, we will be creating larger sized
++    // buffers and pool them permanently. This include Scan/Get request and DDL kind of reqs like
++    // RegionOpen.
++    // 3. If it is an initial handshake signal or initial connection request. Any way then
++    // condition 2 itself will match
++    // 4. When SASL use is ON.
++    if (this.rpcServer.reservoir == null || skipInitialSaslHandshake || !connectionHeaderRead ||
++        useSasl || length < this.rpcServer.minSizeForReservoirUse) {
++      this.data = new SingleByteBuff(ByteBuffer.allocate(length));
++    } else {
++      Pair<ByteBuff, CallCleanup> pair = RpcServer.allocateByteBuffToReadInto(
++        this.rpcServer.reservoir, this.rpcServer.minSizeForReservoirUse, length);
++      this.data = pair.getFirst();
++      this.callCleanup = pair.getSecond();
++    }
++  }
++
++
++
++  /**
++   * Process the data buffer and clean the connection state for the next call.
++   */
++  private void process() throws IOException, InterruptedException {
++    data.rewind();
++    //byte[] arr = new byte[data.remaining()];
++    //data.get(arr);
++    //SimpleRpcServer.LOG.info("RDMARpcConn process() <- content " + StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
++
++    try {
++      //SimpleRpcServer.LOG.info("RDMARpcConn process() <- processOneRpc() invoked.");
++        processOneRpc(data);
++    } finally {
++      dataLengthBuffer.clear(); // Clean for the next call
++      data = null; // For the GC
++      this.callCleanup = null;
++      this.oldDataLength=0;
++    }
++  }
++
++  @Override
++  public synchronized void close() {
++    SimpleRpcServer.LOG.info("RDMARpcConn close() invoked.");
++    if(!rdmaconn.close())
++    {
++      SimpleRpcServer.LOG.warn("RDMARpcConn close() failed.");
++    }
++    //rdma.rdmaDestroyGlobal();
++    data = null;
++    callCleanup = null;
++    
++  }
++
++  @Override
++  public boolean isConnectionOpen() {
++    //SimpleRpcServer.LOG.warn("RDMA isConnectionOpen get result "+!(rdmaconn.isClosed()));
++    return true;
++    //return !(rdmaconn.isClosed());
++  }
++
++  @Override
++  public SimpleRdmaServerCall createCall(int id, BlockingService service, MethodDescriptor md,
++      RequestHeader header, Message param, CellScanner cellScanner, long size,
++      InetAddress remoteAddress, int timeout, CallCleanup reqCleanup) {
++        //SimpleRpcServer.LOG.warn("RDMARpcConn createCall()");
++    return new SimpleRdmaServerCall(id, service, md, header, param, cellScanner, this, size,
++        remoteAddress, System.currentTimeMillis(), timeout, this.rpcServer.reservoir,
++        this.rpcServer.cellBlockBuilder, reqCleanup);
++  }
++
++  @Override
++  protected void doRespond(RpcResponse resp) throws IOException {
++    //SimpleRpcServer.LOG.warn("RDMARpcConn doRespond()");
++    processResponse(this, resp);// this should be okey if we just respond it here,without a responder? TODO
++  }
++
++  public static boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
++    boolean error = true;
++    //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> RpcResponse getResponse()");
++    BufferChain buf = resp.getResponse();
++    try {
++      int length = buf.size();
++      //for (ByteBuffer var : buf.getBuffers()) {
++        //SimpleRpcServer.LOG.info("buf length " +var.remaining());
++      //}
++      byte[] sbuf =buf.getBytes();
++      ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
++      directbuf.put(sbuf);
++      //ByteBuffer directbuf=ByteBuffer.allocateDirect(length);
++      //ByteBuffer tmp = buf.concat(); //ByteBuffer.wrap(sbuf);
++      //directbuf.put(tmp);
++
++
++      //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> try RDMAConn writeResponse()");
++      if (!conn.rdmaconn.writeResponse(directbuf)) {
++        error = true;
++        //SimpleRpcServer.LOG.warn("RDMARpcConn processResponse() -> writeResponse() -> failed");
++      } else {
++        error = false;
++        //directbuf.rewind();
++       // SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> writeResponse() -> done with length and content "+directbuf.remaining()+"  "+ StandardCharsets.UTF_8.decode(directbuf).toString());
++      }
++      //rdma_out.close();
++    } catch (Exception e){
++      SimpleRpcServer.LOG.info("RDMARpcConn processResponse() !! EXCEPTION!");
++      e.printStackTrace();
++    }
++
++    resp.done();
++    if (error) {
++      SimpleRpcServer.LOG.warn("RDMARpcConn closing due to previous failure.");
++      SimpleRpcServer.closeRdmaConnection(conn);
++      return false;
++    }
++    return true;
++
++ }
++}
+diff --git a/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegionServer.java b/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegionServer.java
+index c136e92..0d5b1f0 100644
+--- a/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegionServer.java
++++ b/hbase-server/src/main/java/org/apache/hadoop/hbase/regionserver/HRegionServer.java
+@@ -828,7 +828,7 @@ public class HRegionServer extends HasThread implements
+       setupClusterConnection();
+       // Setup RPC client for master communication
+       this.rpcClient = RpcClientFactory.createClient(conf, clusterId, new InetSocketAddress(
+-          this.rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics());
++          this.rpcServices.isa.getAddress(), 0), clusterConnection.getConnectionMetrics(),true);
+     } catch (Throwable t) {
+       // Call stop if error or process will stick around for ever since server
+       // puts up non-daemon threads.
+diff --git a/rbuild/build.sh b/rbuild/build.sh
+new file mode 100644
+index 0000000..6921655
+--- /dev/null
++++ b/rbuild/build.sh
+@@ -0,0 +1,22 @@
++#!/bin/bash
++
++m2=-Dmaven.repo.local=$PWD/.m2
++mkdir -p ./rbuild/bin/lib
++
++cd ./hbase-client/
++mvn install package -DskipTests $m2
++#important to install it locally, for it will be used in the ../hbase-server/
++cp ./target/hbase-client-2.1.0.jar ../rbuild/bin/lib
++
++
++cd ../hbase-server/
++mvn package -DskipTests $m2
++cp ./target/hbase-server-2.1.0.jar ../rbuild/bin/lib
++
++cd ..
++
++mvn -DskipTests package assembly:single $m2
++
++cd ./hbase-assembly/target/
++cp ./*.gz  ../../rbuild/bin/
++exit
+diff --git a/rbuild/push.sh b/rbuild/push.sh
+new file mode 100644
+index 0000000..f489bad
+--- /dev/null
++++ b/rbuild/push.sh
+@@ -0,0 +1,10 @@
++#!/bin/bash
++ID='-i /home/rgy/.ssh/aliyun/id_rsa -P 25568  rdma_match@proxy.recolic.net'
++
++
++cd ./rbuild/bin/lib
++echo "
++cd ./hbase-2.1.0/lib/
++put ./*.jar
++"|sftp $ID
++echo done.
+\ No newline at end of file
+diff --git a/rbuild/rbuild.sh b/rbuild/rbuild.sh
+new file mode 100644
+index 0000000..55c41d2
+--- /dev/null
++++ b/rbuild/rbuild.sh
+@@ -0,0 +1,24 @@
++#!/bin/bash
++ID='-i /home/rgy/.ssh/aliyun/id_rsa -P 25568  rdma_match@proxy.recolic.net'
++
++mkdir -p ./rbuild/bin/lib
++
++cd ./hbase-client/
++mvn install package -DskipTests
++#important to install it locally, for it will be used in the ../hbase-server/
++cp ./target/hbase-client-2.1.0.jar ../rbuild/bin/lib
++
++
++cd ../hbase-server/
++mvn package -DskipTests
++cp ./target/hbase-server-2.1.0.jar ../rbuild/bin/lib
++
++
++cd ../rbuild/bin/lib
++echo "
++cd ./hbase-2.1.0/lib/
++put ./*.jar
++"|sftp $ID
++echo done.
++
++
+-- 
+2.19.0.rc1
+
