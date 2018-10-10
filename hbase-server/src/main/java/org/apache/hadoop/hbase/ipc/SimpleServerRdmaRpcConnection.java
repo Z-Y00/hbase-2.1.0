@@ -70,7 +70,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   private DataInputStream rdma_in;
   private final LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
   private long lastContact;
-  private RdmaResponder rdmaResponder;
+  private final RdmaResponder rdmaResponder;
   volatile boolean running = true;
   //final RdmaHandler rdmahandler;
 
@@ -98,9 +98,15 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       SimpleRpcServer.LOG.warn("RDMARpcConn init addr failed.");
     }
     this.remotePort = port;
+    
+    //init the responder before you init the conn
+    rdmaResponder=new RdmaResponder();
+    rdmaResponder.start();
+
     do this.rdmaconn = rdma.rdmaBlockedAccept();
          while (this.rdmaconn==null);  
     SimpleRpcServer.LOG.info("RDMARpcConn rdmaAccept <- "+rdmaconn.getClientIp().toString());
+  
   }
 
   public void setLastContact(long lastContact) {
