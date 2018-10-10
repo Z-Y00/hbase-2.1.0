@@ -105,6 +105,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
   private DataOutputStream rdma_out = null ;
   private ByteArrayOutputStream rdma_out_stream = null;
   private static RdmaNative rdma = new RdmaNative();
+  private final RdmaResponseReader rdmaResponseReader;
   //private RdmaConnectionPool rdmaPool=new RdmaConnectionPool(rdma);
   //private RdmaNative.RdmaMuxedClientConnection rdmaconn;//init this at L723 
    private RdmaNative.RdmaClientConnection rdmaconn;
@@ -242,6 +243,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     assert baos.size() == 4 + header.getSerializedSize();
     this.connectionHeaderWithLength = baos.getBuffer();
     this.rdmaPort=remoteId.getAddress().getPort()+1;//plus one
+    this.rdmaResponseReader=new RdmaResponseReader();
 
 
     UserGroupInformation ticket = remoteId.ticket.getUGI();
@@ -355,6 +357,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
 
   @Override
   public void run() {
+    rdmaResponseReader.start();
     if (LOG.isTraceEnabled()) {
       LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
     }
@@ -366,6 +369,23 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     }
     if (LOG.isTraceEnabled()) {
       LOG.trace(threadName + ": stopped, connections " + this.rpcClient.connections.size());
+    }
+  }
+
+  class RdmaResponseReader extends Thread  {
+    @Override
+    public void run() {
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(threadName + ": starting, RdmaResponseReader ");
+      }
+
+      while (waitForWork()) {
+        readRdmaResponse();
+      }
+
+      if (LOG.isTraceEnabled()) {
+        LOG.trace(threadName + ": stopped, RdmaResponseReader ");
+      }
     }
   }
 
@@ -751,7 +771,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       return;
     }
     notifyAll();
-    readRdmaResponse();//waiting for the response
+    
   }
   /*
    * Receive a response. Because only one receiver, so no synchronization on in.

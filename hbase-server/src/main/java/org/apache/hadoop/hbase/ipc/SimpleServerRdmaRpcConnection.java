@@ -70,7 +70,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   private DataInputStream rdma_in;
   private final LongAdder rpcCount = new LongAdder(); // number of outstanding rpcs
   private long lastContact;
-  //final SimpleRpcServerRdmaResponder rdmaresponder;
+  private RdmaResponder rdmaResponder;
+  volatile boolean running = true;
   //final RdmaHandler rdmahandler;
 
   // If initial preamble with version and magic has been read or not.
@@ -300,6 +301,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
 
   @Override
   public synchronized void close() {
+    running=false;
     SimpleRpcServer.LOG.info("RDMARpcConn close() invoked.");
     if(!rdmaconn.close())
     {
@@ -308,6 +310,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     //rdma.rdmaDestroyGlobal();
     data = null;
     callCleanup = null;
+
     
   }
 
@@ -331,10 +334,88 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   @Override
   protected void doRespond(RpcResponse resp) throws IOException {
     //SimpleRpcServer.LOG.warn("RDMARpcConn doRespond()");
-    processResponse(this, resp);// this should be okey if we just respond it here,without a responder? TODO
+    rdmaResponder.doRespond(this, resp);
+    //processResponse(this, resp);// this should be okey if we just respond it here,without a responder? TODO
   }
 
-  public static boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp) throws IOException {
+  class RdmaResponder extends Thread {
+    @Override
+    public void run() {
+      SimpleRpcServer.LOG.debug(getName() + ": starting");
+      try {
+        doRunLoop();
+      } finally {
+        SimpleRpcServer.LOG.info(getName() + ": stopping");
+    }
+  }
+  private void doRunLoop() {//processAllResponses
+    //TODO
+    while (running) {
+      processAllResponses(SimpleServerRdmaRpcConnection.this);
+    }
+    SimpleRpcServer.LOG.info("RdmaResponder : stopped");
+  }
+   /**
+   * Process all the responses for this connection
+   * @return true if all the calls were processed or that someone else is doing it. false if there *
+   *         is still some work to do. In this case, we expect the caller to delay us.
+   * @throws IOException
+   */
+  private boolean processAllResponses(final SimpleServerRdmaRpcConnection connection) {
+    // We want only one writer on the channel for a connection at a time.
+    connection.responseWriteLock.lock();
+    try {
+      for (int i = 0; i < 20; i++) {
+        // protection if some handlers manage to need all the responder
+        RpcResponse resp = connection.responseQueue.pollFirst();
+        if (resp == null) {
+          return true;
+        }
+        if (!processResponse(connection, resp)) {
+          connection.responseQueue.addFirst(resp);
+          return false;
+        }
+      }
+    } finally {
+      connection.responseWriteLock.unlock();
+    }
+
+    return connection.responseQueue.isEmpty();
+  }
+
+    void doRespond(SimpleServerRdmaRpcConnection conn, RpcResponse resp) {
+      boolean added = false;
+      // If there is already a write in progress, we don't wait. This allows to free
+      // the handlers
+      // immediately for other tasks.
+      if (conn.responseQueue.isEmpty() && conn.responseWriteLock.tryLock()) {
+        try {
+          if (conn.responseQueue.isEmpty()) {
+            // If we're alone, we can try to do a direct call to the socket. It's
+            // an optimization to save on context switches and data transfer between cores..
+            if (processResponse(conn, resp)) {
+              return; // we're done.
+            }
+            // Too big to fit, putting ahead.
+            conn.responseQueue.addFirst(resp);
+            added = true; // We will register to the selector later, outside of the lock.
+          }
+        } catch (Exception e) {
+          ;// the error must have been printed
+        }finally {
+          conn.responseWriteLock.unlock();
+        } 
+      }
+
+      if (!added) {
+        conn.responseQueue.addLast(resp);
+      }
+
+    }
+  }
+
+
+  public static boolean processResponse(SimpleServerRdmaRpcConnection conn, RpcResponse resp){
     boolean error = true;
     //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> RpcResponse getResponse()");
     BufferChain buf = resp.getResponse();
