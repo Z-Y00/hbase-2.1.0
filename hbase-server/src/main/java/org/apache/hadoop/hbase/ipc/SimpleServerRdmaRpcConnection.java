@@ -436,7 +436,9 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       //ByteBuffer directbuf=ByteBuffer.allocateDirect(length);
       //ByteBuffer tmp = buf.concat(); //ByteBuffer.wrap(sbuf);
       //directbuf.put(tmp);
-
+      while(!conn.rdmaconn.isResponseWritable())//spin here and wait to write 
+      ;//TODO test the time for server to spin here
+      
 
       //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> try RDMAConn writeResponse()");
       if (!conn.rdmaconn.writeResponse(directbuf)) {

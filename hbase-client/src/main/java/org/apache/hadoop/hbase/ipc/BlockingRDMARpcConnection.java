@@ -357,7 +357,10 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
 
   @Override
   public void run() {
-    rdmaResponseReader.start();
+    if (rdmaPort==16021) {// only for those to the regionserver
+      //rdmaResponseReader.start();
+    }
+    
     if (LOG.isTraceEnabled()) {
       LOG.trace(threadName + ": starting, connections " + this.rpcClient.connections.size());
     }
@@ -674,7 +677,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       //for these belongs to regionserver, so we get it to that same conn
       if((!useSasl)&&(rdmaPort==16021))
         {
-          //LOG.debug("RDMA get a call with callMd "+ callMd);
+          LOG.debug("RDMA get rdma call to send");
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
       else
@@ -771,7 +774,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       return;
     }
     notifyAll();
-    
+    readRdmaResponse();//debugging use it as sequensial
   }
   /*
    * Receive a response. Because only one receiver, so no synchronization on in.
@@ -865,6 +868,10 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     boolean expectedCall = false;
     try {
       LOG.info("RDMA readRdmaResponse waiting");
+      
+      if (rdmaconn == null) {
+        setupRdmaIOstreams();
+      }
       ByteBuffer rbuf=this.rdmaconn.readResponse();
       if (rbuf==null) {
         LOG.info("RDMA readRdmaResponse lbs' bug");
