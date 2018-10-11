@@ -214,7 +214,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       int realDataLength=rbuf.remaining();
 
       if(oldDataLength<dataLength | data==null){
-        SimpleRpcServer.LOG.info("init data! ");
+        //SimpleRpcServer.LOG.info("init data! ");
       initByteBuffToReadInto(dataLength);
       this.arr = new byte[dataLength];
       this.oldDataLength=dataLength;
@@ -242,7 +242,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         
         int trueDataLength = realDataLength - dataLength ;
         if(oldDataLength<trueDataLength | data==null){
-          SimpleRpcServer.LOG.info("re init data! ");
+          //SimpleRpcServer.LOG.info("re init data! ");
         initByteBuffToReadInto(trueDataLength);
         arr = new byte[trueDataLength];
         this.oldDataLength=trueDataLength;
@@ -433,11 +433,11 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       byte[] sbuf =buf.getBytes();
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
       directbuf.put(sbuf);
-      Thread.sleep(10);
+      //Thread.sleep(100);
 
-      //while(!conn.rdmaconn.isResponseWritable())//spin here and wait to write 
+      while(!conn.rdmaconn.isResponseWritable())//spin here and wait to write 
       ;//TODO test the time for server to spin here
-        SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> isResponseWritable()");
+        //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> isResponseWritable()");
    
 
       //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> try RDMAConn writeResponse()");

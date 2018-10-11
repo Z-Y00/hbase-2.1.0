@@ -1,53 +1,251 @@
-
-./test.sh rdma  f 10 100000 1
-READ], Operations, 100000
-[READ], AverageLatency(us), 1086.51445
-[READ], MinLatency(us), 719
-[READ], MaxLatency(us), 162431
-[READ], 95thPercentileLatency(us), 1193
-[READ], 99thPercentileLatency(us), 1369
-[READ], Return=OK, 100000
-[READ-MODIFY-WRITE], Operations, 49922
-[READ-MODIFY-WRITE], AverageLatency(us), 2180.8817956011376
-[READ-MODIFY-WRITE], MinLatency(us), 1449
-[READ-MODIFY-WRITE], MaxLatency(us), 249599
-[READ-MODIFY-WRITE], 95thPercentileLatency(us), 2423
-[READ-MODIFY-WRITE], 99thPercentileLatency(us), 2911
-[UPDATE], Operations, 49922
-[UPDATE], AverageLatency(us), 1088.2127719242017
-[UPDATE], MinLatency(us), 715
-[UPDATE], MaxLatency(us), 73087
-[UPDATE], 95thPercentileLatency(us), 1214
-[UPDATE], 99thPercentileLatency(us), 1553
-[UPDATE], Return=OK, 49922
+fieldlength=3000
+ ~/test.sh rdma a 10000 10000 1
 
 
+[OVERALL], RunTime(ms), 13295
+[OVERALL], Throughput(ops/sec), 752.162467092892
+[TOTAL_GCS_PS_Scavenge], Count, 4
+[TOTAL_GC_TIME_PS_Scavenge], Time(ms), 42
+[TOTAL_GC_TIME_%_PS_Scavenge], Time(%), 0.31590823617901465
+[TOTAL_GCS_PS_MarkSweep], Count, 1
+[TOTAL_GC_TIME_PS_MarkSweep], Time(ms), 41
+[TOTAL_GC_TIME_%_PS_MarkSweep], Time(%), 0.3083866115080857
+[TOTAL_GCs], Count, 5
+[TOTAL_GC_TIME], Time(ms), 83
+[TOTAL_GC_TIME_%], Time(%), 0.6242948476871004
+[READ], Operations, 4993
+[READ], AverageLatency(us), 1276.1265772080912
+[READ], MinLatency(us), 712
+[READ], MaxLatency(us), 183295
+[READ], 95thPercentileLatency(us), 1888
+[READ], 99thPercentileLatency(us), 2809
+[READ], Return=OK, 4993
+[CLEANUP], Operations, 2
+[CLEANUP], AverageLatency(us), 1983.5
+[CLEANUP], MinLatency(us), 54
+[CLEANUP], MaxLatency(us), 3913
+[CLEANUP], 95thPercentileLatency(us), 3913
+[CLEANUP], 99thPercentileLatency(us), 3913
+[UPDATE], Operations, 5007
+[UPDATE], AverageLatency(us), 1141.0782903934492
+[UPDATE], MinLatency(us), 677
+[UPDATE], MaxLatency(us), 79871
+[UPDATE], 95thPercentileLatency(us), 1474
+[UPDATE], 99thPercentileLatency(us), 2729
+[UPDATE], Return=OK, 5007
+
+ ~/test.sh origin a 10000 10000 1
+
+[OVERALL], RunTime(ms), 13242
+[OVERALL], Throughput(ops/sec), 755.1729346020238
+[TOTAL_GCS_PS_Scavenge], Count, 3
+[TOTAL_GC_TIME_PS_Scavenge], Time(ms), 24
+[TOTAL_GC_TIME_%_PS_Scavenge], Time(%), 0.18124150430448574
+[TOTAL_GCS_PS_MarkSweep], Count, 1
+[TOTAL_GC_TIME_PS_MarkSweep], Time(ms), 36
+[TOTAL_GC_TIME_%_PS_MarkSweep], Time(%), 0.2718622564567286
+[TOTAL_GCs], Count, 4
+[TOTAL_GC_TIME], Time(ms), 60
+[TOTAL_GC_TIME_%], Time(%), 0.4531037607612143
+[READ], Operations, 5024
+[READ], AverageLatency(us), 1685.4810907643312
+[READ], MinLatency(us), 568
+[READ], MaxLatency(us), 219135
+[READ], 95thPercentileLatency(us), 2817
+[READ], 99thPercentileLatency(us), 6775
+[READ], Return=OK, 5024
+[CLEANUP], Operations, 2
+[CLEANUP], AverageLatency(us), 1641.0
+[CLEANUP], MinLatency(us), 17
+[CLEANUP], MaxLatency(us), 3265
+[CLEANUP], 95thPercentileLatency(us), 3265
+[CLEANUP], 99thPercentileLatency(us), 3265
+[UPDATE], Operations, 4976
+[UPDATE], AverageLatency(us), 715.3629421221865
+[UPDATE], MinLatency(us), 322
+[UPDATE], MaxLatency(us), 146687
+[UPDATE], 95thPercentileLatency(us), 1149
+[UPDATE], 99thPercentileLatency(us), 1639
+[UPDATE], Return=OK, 4976
+
+fieldlength=2000
+ ~/test.sh rdma a 10000 10000 1
+
+[OVERALL], RunTime(ms), 14638
+[OVERALL], Throughput(ops/sec), 683.1534362617843
+[TOTAL_GCS_PS_Scavenge], Count, 3
+[TOTAL_GC_TIME_PS_Scavenge], Time(ms), 45
+[TOTAL_GC_TIME_%_PS_Scavenge], Time(%), 0.307419046317803
+[TOTAL_GCS_PS_MarkSweep], Count, 1
+[TOTAL_GC_TIME_PS_MarkSweep], Time(ms), 36
+[TOTAL_GC_TIME_%_PS_MarkSweep], Time(%), 0.24593523705424236
+[TOTAL_GCs], Count, 4
+[TOTAL_GC_TIME], Time(ms), 81
+[TOTAL_GC_TIME_%], Time(%), 0.5533542833720454
+[READ], Operations, 4984
+[READ], AverageLatency(us), 1533.2142857142858
+[READ], MinLatency(us), 686
+[READ], MaxLatency(us), 207359
+[READ], 95thPercentileLatency(us), 2131
+[READ], 99thPercentileLatency(us), 4783
+[READ], Return=OK, 4984
+[CLEANUP], Operations, 2
+[CLEANUP], AverageLatency(us), 1201.5
+[CLEANUP], MinLatency(us), 12
+[CLEANUP], MaxLatency(us), 2391
+[CLEANUP], 95thPercentileLatency(us), 2391
+[CLEANUP], 99thPercentileLatency(us), 2391
+[UPDATE], Operations, 5016
+[UPDATE], AverageLatency(us), 1149.3096092503988
+[UPDATE], MinLatency(us), 681
+[UPDATE], MaxLatency(us), 171391
+[UPDATE], 95thPercentileLatency(us), 1507
+[UPDATE], 99thPercentileLatency(us), 2221
+[UPDATE], Return=OK, 5016
+
+origin
+
+fieldlength=400
+rdma
+
+[OVERALL], RunTime(ms), 11997
+[OVERALL], Throughput(ops/sec), 833.541718763024
+[TOTAL_GCS_PS_Scavenge], Count, 2
+[TOTAL_GC_TIME_PS_Scavenge], Time(ms), 36
+[TOTAL_GC_TIME_%_PS_Scavenge], Time(%), 0.30007501875468867
+[TOTAL_GCS_PS_MarkSweep], Count, 1
+[TOTAL_GC_TIME_PS_MarkSweep], Time(ms), 43
+[TOTAL_GC_TIME_%_PS_MarkSweep], Time(%), 0.35842293906810035
+[TOTAL_GCs], Count, 3
+[TOTAL_GC_TIME], Time(ms), 79
+[TOTAL_GC_TIME_%], Time(%), 0.6584979578227891
+[READ], Operations, 5008
+[READ], AverageLatency(us), 1069.4534744408945
+[READ], MinLatency(us), 671
+[READ], MaxLatency(us), 85375
+[READ], 95thPercentileLatency(us), 1352
+[READ], 99thPercentileLatency(us), 2022
+[READ], Return=OK, 5008
+[CLEANUP], Operations, 2
+[CLEANUP], AverageLatency(us), 1989.0
+[CLEANUP], MinLatency(us), 17
+[CLEANUP], MaxLatency(us), 3961
+[CLEANUP], 95thPercentileLatency(us), 3961
+[CLEANUP], 99thPercentileLatency(us), 3961
+[UPDATE], Operations, 4992
+[UPDATE], AverageLatency(us), 1093.723157051282
+[UPDATE], MinLatency(us), 673
+[UPDATE], MaxLatency(us), 166527
+[UPDATE], 95thPercentileLatency(us), 1323
+[UPDATE], 99thPercentileLatency(us), 1797
+[UPDATE], Return=OK, 4992
+
+origin
 
 
+[OVERALL], RunTime(ms), 7666
+[OVERALL], Throughput(ops/sec), 1304.4612575006522
+[TOTAL_GCS_PS_Scavenge], Count, 1
+[TOTAL_GC_TIME_PS_Scavenge], Time(ms), 19
+[TOTAL_GC_TIME_%_PS_Scavenge], Time(%), 0.2478476389251239
+[TOTAL_GCS_PS_MarkSweep], Count, 1
+[TOTAL_GC_TIME_PS_MarkSweep], Time(ms), 35
+[TOTAL_GC_TIME_%_PS_MarkSweep], Time(%), 0.4565614401252283
+[TOTAL_GCs], Count, 2
+[TOTAL_GC_TIME], Time(ms), 54
+[TOTAL_GC_TIME_%], Time(%), 0.7044090790503522
+[READ], Operations, 4967
+[READ], AverageLatency(us), 686.2883027984699
+[READ], MinLatency(us), 360
+[READ], MaxLatency(us), 73215
+[READ], 95thPercentileLatency(us), 1184
+[READ], 99thPercentileLatency(us), 1708
+[READ], Return=OK, 4967
+[CLEANUP], Operations, 2
+[CLEANUP], AverageLatency(us), 1592.0
+[CLEANUP], MinLatency(us), 15
+[CLEANUP], MaxLatency(us), 3169
+[CLEANUP], 95thPercentileLatency(us), 3169
+[CLEANUP], 99thPercentileLatency(us), 3169
+[UPDATE], Operations, 5033
+[UPDATE], AverageLatency(us), 621.9529107887939
+[UPDATE], MinLatency(us), 286
+[UPDATE], MaxLatency(us), 156927
+[UPDATE], 95thPercentileLatency(us), 989
+[UPDATE], 99thPercentileLatency(us), 1397
+[UPDATE], Return=OK, 5033
+[ycsbTester] doing cleanup...
 
-./test.sh origin  f 10 100000 1
-[READ], Operations, 100000
-[READ], AverageLatency(us), 426.28004
-[READ], MinLatency(us), 169
-[READ], MaxLatency(us), 200191
-[READ], 95thPercentileLatency(us), 515
-[READ], 99thPercentileLatency(us), 810
-[READ], Return=OK, 100000
-[READ-MODIFY-WRITE], Operations, 49828
-[READ-MODIFY-WRITE], AverageLatency(us), 862.9902865858553
-[READ-MODIFY-WRITE], MinLatency(us), 351
-[READ-MODIFY-WRITE], MaxLatency(us), 81599
-[READ-MODIFY-WRITE], 95thPercentileLatency(us), 1119
-[READ-MODIFY-WRITE], 99thPercentileLatency(us), 1913
-[UPDATE], Operations, 49828
-[UPDATE], AverageLatency(us), 433.9849080838083
-[UPDATE], MinLatency(us), 170
-[UPDATE], MaxLatency(us), 72255
-[UPDATE], 95thPercentileLatency(us), 635
-[UPDATE], 99thPercentileLatency(us), 1108
-[UPDATE], Return=OK, 49828
+
+fieldlength=1
+
+ ~/test.sh rdma a 10000 10000 1
+
+[OVERALL], RunTime(ms), 12381
+[OVERALL], Throughput(ops/sec), 807.6892011953801
+[TOTAL_GCS_PS_Scavenge], Count, 2
+[TOTAL_GC_TIME_PS_Scavenge], Time(ms), 34
+[TOTAL_GC_TIME_%_PS_Scavenge], Time(%), 0.2746143284064292
+[TOTAL_GCS_PS_MarkSweep], Count, 1
+[TOTAL_GC_TIME_PS_MarkSweep], Time(ms), 29
+[TOTAL_GC_TIME_%_PS_MarkSweep], Time(%), 0.23422986834666018
+[TOTAL_GCs], Count, 3
+[TOTAL_GC_TIME], Time(ms), 63
+[TOTAL_GC_TIME_%], Time(%), 0.5088441967530893
+[READ], Operations, 4976
+[READ], AverageLatency(us), 1135.8104903536978
+[READ], MinLatency(us), 666
+[READ], MaxLatency(us), 183295
+[READ], 95thPercentileLatency(us), 1435
+[READ], 99thPercentileLatency(us), 2091
+[READ], Return=OK, 4976
+[CLEANUP], Operations, 2
+[CLEANUP], AverageLatency(us), 767.5
+[CLEANUP], MinLatency(us), 8
+[CLEANUP], MaxLatency(us), 1527
+[CLEANUP], 95thPercentileLatency(us), 1527
+[CLEANUP], 99thPercentileLatency(us), 1527
+[UPDATE], Operations, 5024
+[UPDATE], AverageLatency(us), 1096.4118232484077
+[UPDATE], MinLatency(us), 668
+[UPDATE], MaxLatency(us), 73471
+[UPDATE], 95thPercentileLatency(us), 1395
+[UPDATE], 99thPercentileLatency(us), 1758
+[UPDATE], Return=OK, 5024
+
+ ~/test.sh origin a 10000 10000 1
 
 
+[OVERALL], RunTime(ms), 7214
+[OVERALL], Throughput(ops/sec), 1386.193512614361
+[TOTAL_GCS_PS_Scavenge], Count, 1
+[TOTAL_GC_TIME_PS_Scavenge], Time(ms), 19
+[TOTAL_GC_TIME_%_PS_Scavenge], Time(%), 0.2633767673967286
+[TOTAL_GCS_PS_MarkSweep], Count, 1
+[TOTAL_GC_TIME_PS_MarkSweep], Time(ms), 35
+[TOTAL_GC_TIME_%_PS_MarkSweep], Time(%), 0.48516772941502634
+[TOTAL_GCs], Count, 2
+[TOTAL_GC_TIME], Time(ms), 54
+[TOTAL_GC_TIME_%], Time(%), 0.748544496811755
+[READ], Operations, 4943
+[READ], AverageLatency(us), 607.6809629779486
+[READ], MinLatency(us), 313
+[READ], MaxLatency(us), 91455
+[READ], 95thPercentileLatency(us), 1021
+[READ], 99thPercentileLatency(us), 1481
+[READ], Return=OK, 4943
+[CLEANUP], Operations, 2
+[CLEANUP], AverageLatency(us), 1562.5
+[CLEANUP], MinLatency(us), 14
+[CLEANUP], MaxLatency(us), 3111
+[CLEANUP], 95thPercentileLatency(us), 3111
+[CLEANUP], 99thPercentileLatency(us), 3111
+[UPDATE], Operations, 5057
+[UPDATE], AverageLatency(us), 594.2533122404587
+[UPDATE], MinLatency(us), 322
+[UPDATE], MaxLatency(us), 161791
+[UPDATE], 95thPercentileLatency(us), 889
+[UPDATE], 99thPercentileLatency(us), 1159
+[UPDATE], Return=OK, 5057
 
-./test.sh rdma  f 1 20000 10
-./test.sh origin  f 1 20000 10
+

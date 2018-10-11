@@ -362,7 +362,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
 
   @Override
   public void run() {
-    if (rdmaPort==16021) {// only for those to the regionserver
+    if (this.rdmaPort==16021 && !this.rdmaResponseReader.isAlive()) {// only for those to the regionserver
       rdmaResponseReader.start();
     }
     
@@ -872,7 +872,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     Call call = null;
     boolean expectedCall = false;
     try {
-      LOG.error("RDMA readRdmaResponse waiting");
+      //LOG.error("RDMA readRdmaResponse waiting");
       
       if (rdmaconn == null) {
         setupRdmaIOstreams();
