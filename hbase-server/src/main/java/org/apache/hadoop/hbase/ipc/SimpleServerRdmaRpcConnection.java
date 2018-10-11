@@ -340,8 +340,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   @Override
   protected void doRespond(RpcResponse resp) throws IOException {
     //SimpleRpcServer.LOG.warn("RDMARpcConn doRespond()");
-    rdmaResponder.doRespond(this, resp);
-    //processResponse(this, resp);// this should be okey if we just respond it here,without a responder? TODO
+    //rdmaResponder.doRespond(this, resp);
+    processResponse(this, resp);// sequentical debugging
   }
 
   class RdmaResponder extends Thread {
@@ -438,7 +438,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       //directbuf.put(tmp);
       while(!conn.rdmaconn.isResponseWritable())//spin here and wait to write 
       ;//TODO test the time for server to spin here
-      
+        //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> isResponseWritable()");
+   
 
       //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> try RDMAConn writeResponse()");
       if (!conn.rdmaconn.writeResponse(directbuf)) {
