@@ -243,7 +243,12 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     assert baos.size() == 4 + header.getSerializedSize();
     this.connectionHeaderWithLength = baos.getBuffer();
     this.rdmaPort=remoteId.getAddress().getPort()+1;//plus one
-    this.rdmaResponseReader=new RdmaResponseReader();
+    if(this.rdmaPort==16021){
+      this.rdmaResponseReader=new RdmaResponseReader();
+    }else{
+      this.rdmaResponseReader=null;
+    }
+
 
 
     UserGroupInformation ticket = remoteId.ticket.getUGI();
@@ -358,7 +363,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
   @Override
   public void run() {
     if (rdmaPort==16021) {// only for those to the regionserver
-      //rdmaResponseReader.start();
+      rdmaResponseReader.start();
     }
     
     if (LOG.isTraceEnabled()) {
@@ -774,7 +779,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       return;
     }
     notifyAll();
-    readRdmaResponse();//debugging use it as sequensial
+    //readRdmaResponse();//debugging use it as sequensial
   }
   /*
    * Receive a response. Because only one receiver, so no synchronization on in.
@@ -867,14 +872,14 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
     Call call = null;
     boolean expectedCall = false;
     try {
-      LOG.info("RDMA readRdmaResponse waiting");
+      LOG.error("RDMA readRdmaResponse waiting");
       
       if (rdmaconn == null) {
         setupRdmaIOstreams();
       }
       ByteBuffer rbuf=this.rdmaconn.readResponse();
       if (rbuf==null) {
-        LOG.info("RDMA readRdmaResponse lbs' bug");
+        LOG.error("RDMA readRdmaResponse lbs' bug");
       }
       int length = rbuf.remaining();
       //LOG.info("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());

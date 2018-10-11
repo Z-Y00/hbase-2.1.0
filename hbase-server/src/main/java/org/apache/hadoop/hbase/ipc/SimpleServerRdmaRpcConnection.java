@@ -214,7 +214,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       int realDataLength=rbuf.remaining();
 
       if(oldDataLength<dataLength | data==null){
-        SimpleRpcServer.LOG.error("init data! ");
+        SimpleRpcServer.LOG.info("init data! ");
       initByteBuffToReadInto(dataLength);
       this.arr = new byte[dataLength];
       this.oldDataLength=dataLength;
@@ -242,7 +242,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         
         int trueDataLength = realDataLength - dataLength ;
         if(oldDataLength<trueDataLength | data==null){
-          SimpleRpcServer.LOG.error("re init data! ");
+          SimpleRpcServer.LOG.info("re init data! ");
         initByteBuffToReadInto(trueDataLength);
         arr = new byte[trueDataLength];
         this.oldDataLength=trueDataLength;
@@ -340,8 +340,8 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   @Override
   protected void doRespond(RpcResponse resp) throws IOException {
     //SimpleRpcServer.LOG.warn("RDMARpcConn doRespond()");
-    //rdmaResponder.doRespond(this, resp);
-    processResponse(this, resp);// sequentical debugging
+    rdmaResponder.doRespond(this, resp);
+    //processResponse(this, resp);// sequentical debugging
   }
 
   class RdmaResponder extends Thread {
@@ -433,12 +433,11 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       byte[] sbuf =buf.getBytes();
       ByteBuffer directbuf=ByteBuffer.allocateDirect(sbuf.length);
       directbuf.put(sbuf);
-      //ByteBuffer directbuf=ByteBuffer.allocateDirect(length);
-      //ByteBuffer tmp = buf.concat(); //ByteBuffer.wrap(sbuf);
-      //directbuf.put(tmp);
-      while(!conn.rdmaconn.isResponseWritable())//spin here and wait to write 
+      Thread.sleep(10);
+
+      //while(!conn.rdmaconn.isResponseWritable())//spin here and wait to write 
       ;//TODO test the time for server to spin here
-        //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> isResponseWritable()");
+        SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> isResponseWritable()");
    
 
       //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> try RDMAConn writeResponse()");
@@ -450,7 +449,6 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         //directbuf.rewind();
        // SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> writeResponse() -> done with length and content "+directbuf.remaining()+"  "+ StandardCharsets.UTF_8.decode(directbuf).toString());
       }
-      //rdma_out.close();
     } catch (Exception e){
       SimpleRpcServer.LOG.info("RDMARpcConn processResponse() !! EXCEPTION!");
       e.printStackTrace();
