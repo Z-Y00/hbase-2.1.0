@@ -64,7 +64,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   private ByteBuff data;
   private byte[] arr;
   private int oldDataLength;
-  private ByteBuffer dataLengthBuffer;
+  //private ByteBuffer dataLengthBuffer;
   private ByteBuffer preambleBuffer;
   private ByteBuffer rbuf;
   private DataInputStream rdma_in;
@@ -87,7 +87,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     this.lastContact = lastContact;
     this.connectionHeaderRead=false;
     this.data = null;
-    this.dataLengthBuffer = ByteBuffer.allocate(4);
+    //this.dataLengthBuffer = ByteBuffer.allocate(4);
     this.oldDataLength=0;
     this.arr=null;
     
@@ -125,7 +125,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   boolean isReadable(){
     if (rdmaconn.isQueryReadable()) {
       this.rbuf=rdmaconn.readQuery();
-      this.rbuf.rewind();
+      //this.rbuf.rewind();
       //this.rdma_in=new DataInputStream(new ByteArrayInputStream(rbuf));
       //SimpleRpcServer.LOG.debug("RDMARpcConn isReadable <- rbuf("
       //+rbuf.remaining() +", "+ StandardCharsets.UTF_8.decode(rbuf).toString() + ")");
@@ -146,43 +146,6 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   }
 
 
-  public static int bufcopy(ByteBuffer src, ByteBuffer dst){
-    int i=0;
-    while (src.hasRemaining()&&dst.hasRemaining())
-    {dst.put(src.get()); 
-    i++;}
-    return i;
-  }
-
-  private int readPreamble() throws IOException {
-    if (preambleBuffer == null) {
-      preambleBuffer = ByteBuffer.allocate(6);
-    }
-    preambleBuffer.rewind(); 
-    int count = bufcopy(rbuf, preambleBuffer);
-    //SimpleRpcServer.LOG.debug("RDMARpcConn readPreamble() <- count "+ count+" preambleBuffer "+preambleBuffer);
-    if (count < 0 || preambleBuffer.remaining() > 0) {
-      //SimpleRpcServer.LOG.warn("RDMARpcConn readPreamble() -> bufcopy() failed.");
-      return count;
-    }
-    preambleBuffer.flip();
-    if (!processPreamble(preambleBuffer)) {
-      //SimpleRpcServer.LOG.warn("RDMARpcConn readPreamble() -> processPreamble() failed.");
-      return -1;
-    }
-    preambleBuffer = null; // do not need it anymore
-    connectionPreambleRead = true;
-    return count;
-  }
-
-  private int read4Bytes() throws IOException {
-    //if (this.dataLengthBuffer.remaining() > 0) {
-      return bufcopy(rbuf, this.dataLengthBuffer);
-    //} else {
-    //  return 0;
-    //}
-  }
-
   /**
    * Read off the wire. If there is not enough data to read, update the connection state with what
    * we have and returns.
@@ -193,23 +156,20 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
   public int readAndProcess() throws IOException, InterruptedException {
     //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() invoked.");
 
-    if (!connectionHeaderRead)// force drop the conn header after first rbuf
+    //if (!connectionHeaderRead)// force drop the conn header after first rbuf
     //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() detected header not read.");
 
     rbuf.rewind();
-    dataLengthBuffer.rewind();
+    //dataLengthBuffer.rewind();
     // Try and read in an int. it will be length of the data to read (or -1 if a ping). We catch the
-    // integer length into the 4-byte this.dataLengthBuffer.
-    int count = read4Bytes();
+    // integer length into the 4-byte this.dataLengthBuffer. TODO drop for faster rdma process Y00
+    //int count = bufcopy(rbuf, this.dataLengthBuffer);
     //SimpleRpcServer.LOG.info("RDMARpcConn readAndProcess() -> read4Bytes() -> "+ count);
-    if (count < 0 || dataLengthBuffer.remaining() > 0) {
+    //if (count < 0) {
       //SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() -> read4Bytes() Failed.");
-      return count;
-    }
-
-    //if (data == null) { //TODO always init the data buffer? Y00
-      dataLengthBuffer.flip();
-      int dataLength = dataLengthBuffer.getInt();
+      //return count;
+    //}
+      int dataLength = rbuf.getInt();
       //SimpleRpcServer.LOG.debug("RDMARpcConn readAndProcess() -> dataLength "+ dataLength);
       int realDataLength=rbuf.remaining();
 
@@ -241,7 +201,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         //  SimpleRpcServer.LOG.warn("RDMARpcConn readAndProcess() header not read !?");
         
         int trueDataLength = realDataLength - dataLength ;
-        if(oldDataLength<trueDataLength | data==null){
+        if(oldDataLength<trueDataLength){
           //SimpleRpcServer.LOG.info("re init data! ");
         initByteBuffToReadInto(trueDataLength);
         arr = new byte[trueDataLength];
@@ -298,8 +258,9 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
       //SimpleRpcServer.LOG.info("RDMARpcConn process() <- processOneRpc() invoked.");
         processOneRpc(data);
     } finally {
-      dataLengthBuffer.clear(); // Clean for the next call
+      //dataLengthBuffer.clear(); // Clean for the next call
       data = null; // For the GC
+      //this.arr=null;
       this.callCleanup = null;
       this.oldDataLength=0;
     }
@@ -367,7 +328,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
    *         is still some work to do. In this case, we expect the caller to delay us.
    * @throws IOException
    */
-  private boolean processAllResponses(final SimpleServerRdmaRpcConnection connection) {
+  private void processAllResponses(final SimpleServerRdmaRpcConnection connection) {
     // We want only one writer on the channel for a connection at a time.
     connection.responseWriteLock.lock();
     try {
@@ -375,18 +336,18 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
         // protection if some handlers manage to need all the responder
         RpcResponse resp = connection.responseQueue.pollFirst();
         if (resp == null) {
-          return true;
+          return ;
         }
         if (!processResponse(connection, resp)) {
           connection.responseQueue.addFirst(resp);
-          return false;
+          return ;
         }
       }
     } finally {
       connection.responseWriteLock.unlock();
     }
 
-    return connection.responseQueue.isEmpty();
+    return ;
   }
 
     void doRespond(SimpleServerRdmaRpcConnection conn, RpcResponse resp) {
@@ -426,7 +387,7 @@ class SimpleServerRdmaRpcConnection extends ServerRpcConnection {
     //SimpleRpcServer.LOG.info("RDMARpcConn processResponse() -> RpcResponse getResponse()");
     BufferChain buf = resp.getResponse();
     try {
-      int length = buf.size();
+      //int length = buf.size();
       //for (ByteBuffer var : buf.getBuffers()) {
         //SimpleRpcServer.LOG.info("buf length " +var.remaining());
       //}

@@ -299,8 +299,8 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
    */
   private void process() throws IOException, InterruptedException {
     data.rewind();
-    byte[] arr = new byte[data.remaining()];
-    data.get(arr);
+    //byte[] arr = new byte[data.remaining()];
+    //data.get(arr);
     //SimpleRpcServer.LOG.warn("RDMA normal data content " +" "+ StandardCharsets.UTF_8.decode(ByteBuffer.wrap(arr)).toString());
 
     try {

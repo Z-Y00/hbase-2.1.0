@@ -199,7 +199,17 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
             continue;
           }
           try {
-            tracedWriteRequest(call);
+            if((!useSasl)&&(rdmaPort==16021))
+            {
+              //LOG.debug("RDMA get rdma call to send");
+            writeRdmaRequest(call);}
+            //writeRequest(call);}//debugging
+          else
+          {//LOG.debug("RDMA get a normal call with callMd and addr "+ callMd+" "+remoteId.getAddress().toString());
+            writeRequest(call);}
+        
+
+            //tracedWriteRequest(call);
           } catch (IOException e) {
             // exception here means the call has not been added to the pendingCalls yet, so we need
             // to fail it by our own.
@@ -589,13 +599,13 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         // Now write out the connection header//
         // this will init the servie and usr ugi
       rdma_out.write(connectionHeaderWithLength);// essential connectionHeaderRead
-      this.rdmaconn.init();
+      //this.rdmaconn.init();
 
     } catch (Throwable t) {
       LOG.warn("Error in RDMA setupRDMAIOstream");
     }
 
-    // start the receiver thread after the socket connection has been set up
+    // start the receiver thread after the connection has been set up
     thread = new Thread(this, threadName);
     thread.setDaemon(true);
     thread.start();
@@ -682,7 +692,7 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
       //for these belongs to regionserver, so we get it to that same conn
       if((!useSasl)&&(rdmaPort==16021))
         {
-          LOG.debug("RDMA get rdma call to send");
+          //LOG.debug("RDMA get rdma call to send");
         writeRdmaRequest(call);}
         //writeRequest(call);}//debugging
       else
@@ -878,9 +888,6 @@ class BlockingRDMARpcConnection extends RpcConnection implements Runnable {
         setupRdmaIOstreams();
       }
       ByteBuffer rbuf=this.rdmaconn.readResponse();
-      if (rbuf==null) {
-        LOG.error("RDMA readRdmaResponse lbs' bug");
-      }
       int length = rbuf.remaining();
       //LOG.info("RDMA get rbuf readResponse! with length and content "+length+" "+StandardCharsets.UTF_8.decode(rbuf).toString());
       //rbuf.rewind();
